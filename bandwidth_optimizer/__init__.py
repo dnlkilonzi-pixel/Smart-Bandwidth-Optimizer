@@ -21,6 +21,18 @@ from .packet_filter import DropDecision, PacketFilter, TokenBucket
 from .policy import Policy, PolicyLoadError, PolicyLoader, PolicyRule
 from .safety import CircuitState, FailMode, HealthStatus, SafetyGuard
 from .scheduler import PriorityScheduler
+from .sla import (
+    BackpressureLevel,
+    BackpressureMonitor,
+    BackpressureState,
+    DEFAULT_SLA_PIPELINE_CEILING_US,
+    DEFAULT_SLA_SOJOURN_CEILING_MS,
+    SLAConfig,
+    SLAMonitor,
+    SLAViolation,
+)
+from .stress import StressConfig, StressPattern, StressResult, StressTester
+from .trust import SIGNATURE_HEADER, sign_payload, verify_payload
 
 __all__ = [
     # config
@@ -67,4 +79,22 @@ __all__ = [
     "AgentConfig",
     "NodeAgent",
     "AgentCoordinator",
+    # SLA + backpressure
+    "SLAConfig",
+    "SLAMonitor",
+    "SLAViolation",
+    "DEFAULT_SLA_PIPELINE_CEILING_US",
+    "DEFAULT_SLA_SOJOURN_CEILING_MS",
+    "BackpressureLevel",
+    "BackpressureState",
+    "BackpressureMonitor",
+    # stress testing
+    "StressPattern",
+    "StressConfig",
+    "StressResult",
+    "StressTester",
+    # trust
+    "sign_payload",
+    "verify_payload",
+    "SIGNATURE_HEADER",
 ]

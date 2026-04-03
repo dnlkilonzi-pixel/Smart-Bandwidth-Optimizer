@@ -34,6 +34,8 @@ class Packet:
     size_bytes: int = 0            # total packet size (headers + payload)
     # Set by the classifier; callers may also set it before enqueuing
     priority: Optional[TrafficPriority] = None
+    # Set by PriorityScheduler at enqueue time – used for sojourn SLA checks
+    enqueued_at: Optional[float] = None
 
     def __post_init__(self) -> None:
         if self.size_bytes == 0:

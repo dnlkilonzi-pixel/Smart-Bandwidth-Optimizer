@@ -96,11 +96,16 @@ class AgentConfig:
         Seconds between heartbeat POSTs to the coordinator.
     tags:
         Arbitrary key/value metadata attached to every heartbeat.
+    auth_secret:
+        Shared secret used to sign heartbeat payloads (HMAC-SHA256).
+        Empty string = unsigned (no authentication).
+        Must match the ``auth_secret`` configured on the coordinator.
     """
     node_id: str
     coordinator_url: str = ""
     heartbeat_interval: float = 5.0
     tags: dict = field(default_factory=dict)
+    auth_secret: str = ""
 
 
 # ─────────────────────────── node agent ──────────────────────────────────────
@@ -200,7 +205,9 @@ class NodeAgent:
             self._send_heartbeat()
 
     def _send_heartbeat(self) -> None:
-        """POST current stats to the coordinator."""
+        """POST current stats to the coordinator, optionally signed."""
+        from .trust import sign_payload, SIGNATURE_HEADER
+
         url = (
             f"{self._config.coordinator_url.rstrip('/')}"
             f"/agent/{self._config.node_id}/stats"
@@ -208,12 +215,14 @@ class NodeAgent:
         payload = json.dumps(
             _make_serialisable(self.stats())
         ).encode("utf-8")
-        req = Request(
-            url,
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
+
+        headers = {"Content-Type": "application/json"}
+        if self._config.auth_secret:
+            headers[SIGNATURE_HEADER] = sign_payload(
+                self._config.auth_secret, payload
+            )
+
+        req = Request(url, data=payload, headers=headers, method="POST")
         try:
             with urlopen(req, timeout=5) as _:
                 pass

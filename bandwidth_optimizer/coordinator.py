@@ -13,6 +13,11 @@ can also be used standalone in tests or in-process multi-node scenarios::
     coord = AgentCoordinator(agent_ttl=30.0)
     coord.ingest("node-01", {"packets_received": 1000, ...})
     print(coord.all_agents())
+
+Authenticated mode::
+
+    coord = AgentCoordinator(require_auth=True, auth_secret="my-shared-secret")
+    # The API endpoint will call coord.ingest_authenticated(node_id, body, sig)
 """
 
 from __future__ import annotations
@@ -20,6 +25,8 @@ from __future__ import annotations
 import threading
 import time
 from typing import Dict, Optional
+
+from .trust import verify_payload, SIGNATURE_HEADER
 
 
 class AgentCoordinator:
@@ -34,10 +41,24 @@ class AgentCoordinator:
     agent_ttl:
         Seconds after which a silent agent is considered offline and
         removed from the registry.
+    require_auth:
+        When ``True``, ``ingest_authenticated()`` must be used; plain
+        ``ingest()`` calls are still accepted but the API endpoint will
+        enforce signature verification.
+    auth_secret:
+        Shared secret used to verify HMAC-SHA256 signatures on incoming
+        heartbeat payloads.  Only relevant when ``require_auth=True``.
     """
 
-    def __init__(self, agent_ttl: float = 60.0) -> None:
+    def __init__(
+        self,
+        agent_ttl: float = 60.0,
+        require_auth: bool = False,
+        auth_secret: str = "",
+    ) -> None:
         self._ttl = agent_ttl
+        self._require_auth = require_auth
+        self._auth_secret = auth_secret
         self._lock = threading.Lock()
         # node_id → {"stats": {...}, "last_seen": float}
         self._registry: Dict[str, dict] = {}
@@ -55,6 +76,29 @@ class AgentCoordinator:
                 "stats": stats,
                 "last_seen": time.time(),
             }
+
+    def ingest_authenticated(
+        self,
+        node_id: str,
+        raw_body: bytes,
+        signature: str,
+        stats: dict,
+    ) -> bool:
+        """
+        Verify *signature* over *raw_body* then ingest *stats*.
+
+        :returns: ``True`` if accepted, ``False`` if signature verification
+                  failed (caller should return HTTP 401).
+        """
+        if self._require_auth and self._auth_secret:
+            if not verify_payload(self._auth_secret, raw_body, signature):
+                return False
+        self.ingest(node_id, stats)
+        return True
+
+    @property
+    def require_auth(self) -> bool:
+        return self._require_auth
 
     def all_agents(self) -> dict:
         """

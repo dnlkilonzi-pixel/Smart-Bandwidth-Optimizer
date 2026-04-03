@@ -31,7 +31,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -43,6 +43,8 @@ from bandwidth_optimizer import (
 )
 from bandwidth_optimizer.coordinator import AgentCoordinator
 from bandwidth_optimizer.safety import HealthStatus, SafetyGuard
+from bandwidth_optimizer.sla import BackpressureMonitor, SLAMonitor
+from bandwidth_optimizer.trust import SIGNATURE_HEADER
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -152,6 +154,13 @@ def create_app(
     _run_sim = optimizer is None
     _coordinator = coordinator  # may be None
 
+    # SLA monitor (wraps optimizer if it's a bare BandwidthOptimizer or SLAMonitor)
+    _sla_monitor: Optional[SLAMonitor] = (
+        optimizer if isinstance(optimizer, SLAMonitor) else None
+    )
+    # Backpressure monitor always available
+    _bp_monitor = BackpressureMonitor(_optimizer)
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         sim_thread: Optional[threading.Thread] = None
@@ -206,6 +215,37 @@ def create_app(
             base["safety"] = _optimizer.health().to_dict()
         return base
 
+    @app.get("/sla", summary="SLA violation statistics")
+    async def get_sla() -> dict:
+        """
+        Return SLA violation counts and recent breaches.
+
+        Only populated when the optimizer is wrapped in an ``SLAMonitor``.
+        Returns a zero-filled snapshot otherwise.
+        """
+        if _sla_monitor is not None:
+            return _sla_monitor.sla_stats().to_dict()
+        # No SLA monitor attached – return an informative empty response
+        return {
+            "total_violations": 0,
+            "pipeline_violations_by_priority": {},
+            "sojourn_violations_by_priority": {},
+            "packets_expired": 0,
+            "recent_violations": [],
+            "note": "Attach an SLAMonitor to enable SLA tracking.",
+        }
+
+    @app.get("/backpressure", summary="Backpressure signal")
+    async def get_backpressure() -> dict:
+        """
+        Return the current backpressure state.
+
+        ``level`` is one of ``none`` / ``soft`` / ``hard``.
+        ``recommended_throttle_pct`` tells upstream senders how much to slow down.
+        """
+        state = _bp_monitor.update()
+        return state.to_dict()
+
     # ── multi-node agent endpoints ────────────────────────────────────────
 
     @app.post(
@@ -213,17 +253,37 @@ def create_app(
         summary="Receive heartbeat stats from a NodeAgent",
         include_in_schema=_coordinator is not None,
     )
-    async def receive_agent_stats(node_id: str, stats: dict) -> dict:
+    async def receive_agent_stats(
+        node_id: str,
+        request: Request,
+        stats: dict,
+    ) -> dict:
         """
         Accept a stats heartbeat from a remote ``NodeAgent``.
 
-        The payload is the JSON-serialised dict returned by
-        ``NodeAgent.stats()``.  Returns 200 with ``{"ok": true}`` on success.
-        Requires a coordinator to be configured; returns 404 otherwise.
+        When the coordinator is configured with ``require_auth=True``, the
+        request must include a valid ``X-Agent-Signature`` header containing
+        the HMAC-SHA256 of the raw request body.  Requests with a missing or
+        invalid signature are rejected with HTTP 401.
         """
         if _coordinator is None:
             from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="Coordinator not configured")
+
+        if _coordinator.require_auth:
+            signature = request.headers.get(SIGNATURE_HEADER, "")
+            raw_body = await request.body()
+            accepted = _coordinator.ingest_authenticated(
+                node_id, raw_body, signature, stats
+            )
+            if not accepted:
+                from fastapi import HTTPException
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid or missing agent signature",
+                )
+            return {"ok": True, "node_id": node_id}
+
         _coordinator.ingest(node_id, stats)
         return {"ok": True, "node_id": node_id}
 

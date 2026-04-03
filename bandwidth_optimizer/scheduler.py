@@ -15,6 +15,7 @@ from __future__ import annotations
 import heapq
 import itertools
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import Dict, Iterator, List, Optional
 
@@ -70,6 +71,8 @@ class PriorityScheduler:
         :returns: ``True`` if the packet was accepted, ``False`` if dropped.
         """
         priority = packet.priority or TrafficPriority.MEDIUM
+        # Stamp the packet so sojourn time can be measured downstream
+        packet.enqueued_at = time.monotonic()
         entry = _QueueEntry(
             priority_value=priority.value,
             sequence=next(self._counter),

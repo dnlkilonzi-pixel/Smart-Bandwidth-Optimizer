@@ -256,17 +256,23 @@ def cmd_serve(args: argparse.Namespace) -> None:
     optimizer = _build_optimizer(args)
     optimizer = _wrap_safety(optimizer, args)
 
-    coordinator = AgentCoordinator() if getattr(args, "coordinator", False) else None
-    if coordinator:
-        print("  Multi-node coordinator enabled (POST /agent/<id>/stats, GET /agents)")
+    secret = getattr(args, "secret", "") or ""
+    coordinator = None
+    if getattr(args, "coordinator", False):
+        require_auth = bool(secret)
+        coordinator = AgentCoordinator(require_auth=require_auth, auth_secret=secret)
+        auth_info = f" (HMAC auth required: {require_auth})"
+        print(f"  Multi-node coordinator enabled{auth_info}")
 
     app = create_app(optimizer=optimizer, coordinator=coordinator)
 
     print(f"\n  Smart Bandwidth Optimizer – Telemetry Server")
-    print(f"  Dashboard: http://{args.host}:{args.port}/")
-    print(f"  Stats API: http://{args.host}:{args.port}/stats")
-    print(f"  Flows API: http://{args.host}:{args.port}/flows")
-    print(f"  WebSocket: ws://{args.host}:{args.port}/ws")
+    print(f"  Dashboard:    http://{args.host}:{args.port}/")
+    print(f"  Stats API:    http://{args.host}:{args.port}/stats")
+    print(f"  SLA API:      http://{args.host}:{args.port}/sla")
+    print(f"  Backpressure: http://{args.host}:{args.port}/backpressure")
+    print(f"  Flows API:    http://{args.host}:{args.port}/flows")
+    print(f"  WebSocket:    ws://{args.host}:{args.port}/ws")
     print(f"  Press Ctrl-C to stop.\n")
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
@@ -289,6 +295,38 @@ def cmd_bench(args: argparse.Namespace) -> None:
           f"({cfg.packet_size_bytes}B each, {cfg.warmup_packets} warmup)…")
 
     result = Benchmarker.run(optimizer=optimizer, cfg=cfg)
+    print(result.summary())
+
+    if args.json:
+        print(json.dumps(result.to_dict(), indent=2))
+
+
+def cmd_stress(args: argparse.Namespace) -> None:
+    """Run an adversarial stress test."""
+    from bandwidth_optimizer.stress import StressConfig, StressPattern, StressTester
+
+    optimizer = _build_optimizer(args)
+
+    try:
+        pattern = StressPattern(args.pattern)
+    except ValueError:
+        print(f"Unknown pattern: {args.pattern!r}", file=sys.stderr)
+        sys.exit(1)
+
+    cfg = StressConfig(
+        duration_seconds=args.duration,
+        target_pps=args.pps,
+        n_threads=args.threads,
+        pattern=pattern,
+        packet_size_bytes=args.pkt_size,
+    )
+
+    print(f"\n  Stress test: pattern={pattern.value}  "
+          f"pps={args.pps:,}  threads={args.threads}  "
+          f"duration={args.duration}s")
+    print("  Running…\n")
+
+    result = StressTester.run(optimizer=optimizer, cfg=cfg)
     print(result.summary())
 
     if args.json:
@@ -366,6 +404,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="Enable multi-node coordinator (POST /agent/<id>/stats, GET /agents)",
     )
+    srv_p.add_argument(
+        "--secret",
+        default="",
+        metavar="SECRET",
+        help=(
+            "Shared HMAC-SHA256 secret for agent authentication. "
+            "When set with --coordinator, agents must sign their heartbeats."
+        ),
+    )
 
     bench_p = sub.add_parser("bench", help="Run a performance benchmark.")
     bench_p.add_argument(
@@ -390,6 +437,53 @@ def build_parser() -> argparse.ArgumentParser:
         help="Also print full JSON result after the summary",
     )
 
+    from bandwidth_optimizer.stress import StressPattern
+    stress_p = sub.add_parser(
+        "stress",
+        help="Run an adversarial stress test at scale.",
+    )
+    stress_p.add_argument(
+        "--duration",
+        type=float,
+        default=10.0,
+        metavar="SECONDS",
+        help="Test duration in seconds (default: 10)",
+    )
+    stress_p.add_argument(
+        "--pps",
+        type=int,
+        default=10_000,
+        metavar="PPS",
+        help="Target aggregate packets/second (default: 10000)",
+    )
+    stress_p.add_argument(
+        "--threads",
+        type=int,
+        default=4,
+        metavar="N",
+        help="Number of parallel sender threads (default: 4)",
+    )
+    stress_p.add_argument(
+        "--pattern",
+        choices=[p.value for p in StressPattern],
+        default=StressPattern.UNIFORM.value,
+        help="Traffic pattern (default: uniform)",
+    )
+    stress_p.add_argument(
+        "--pkt-size",
+        dest="pkt_size",
+        type=int,
+        default=512,
+        metavar="BYTES",
+        help="Packet payload size in bytes (default: 512)",
+    )
+    stress_p.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Also print full JSON result after the summary",
+    )
+
     return parser
 
 
@@ -407,6 +501,8 @@ def main(argv=None) -> int:
         cmd_serve(args)
     elif args.command == "bench":
         cmd_bench(args)
+    elif args.command == "stress":
+        cmd_stress(args)
     else:
         parser.print_help()
 
