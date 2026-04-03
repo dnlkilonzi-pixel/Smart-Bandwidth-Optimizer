@@ -34,6 +34,7 @@ from bandwidth_optimizer import (
 )
 from bandwidth_optimizer.classifier import TrafficClassifier
 from bandwidth_optimizer.policy import PolicyLoadError, PolicyLoader
+from bandwidth_optimizer.safety import FailMode, SafetyGuard
 
 
 # ─────────────────────────── helpers ─────────────────────────────────────────
@@ -56,6 +57,21 @@ def _build_optimizer(args: argparse.Namespace, **cfg_kwargs) -> BandwidthOptimiz
         print(f"  Loaded {len(policy.rules)} rules from {policy_path}")
 
     return optimizer
+
+
+def _wrap_safety(optimizer: BandwidthOptimizer, args: argparse.Namespace):
+    """Optionally wrap the optimizer in a SafetyGuard based on CLI flags."""
+    fail_mode_str = getattr(args, "fail_mode", None)
+    if not fail_mode_str:
+        return optimizer
+    try:
+        fail_mode = FailMode(fail_mode_str)
+    except ValueError:
+        print(f"Unknown fail-mode: {fail_mode_str!r}", file=sys.stderr)
+        sys.exit(1)
+    threshold = getattr(args, "circuit_threshold", 5)
+    print(f"  Safety guard: fail_mode={fail_mode.value}, circuit_threshold={threshold}")
+    return SafetyGuard(optimizer, fail_mode=fail_mode, circuit_threshold=threshold)
 
 
 # ─────────────────────────── demo helpers ────────────────────────────────────
@@ -153,6 +169,7 @@ def cmd_simulate(args: argparse.Namespace) -> None:
     optimizer = _build_optimizer(
         args, max_queue_size=128, compression_threshold_bytes=128
     )
+    optimizer = _wrap_safety(optimizer, args)
 
     # Traffic mix: (dst_port, protocol, weight)
     traffic_templates = [
@@ -168,7 +185,7 @@ def cmd_simulate(args: argparse.Namespace) -> None:
     protos  = [t[1] for t in traffic_templates]
     weights = [t[2] for t in traffic_templates]
 
-    print(f"\nSimulating traffic  (mode={mode.value}, bw={args.bw:,} B/s)")
+    print(f"\nSimulating traffic  (mode={args.mode}, bw={args.bw:,} B/s)")
     print("Press Ctrl-C to stop.\n")
 
     iteration = 0
@@ -234,9 +251,16 @@ def cmd_serve(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     from api.server import create_app
+    from bandwidth_optimizer.coordinator import AgentCoordinator
 
     optimizer = _build_optimizer(args)
-    app = create_app(optimizer=optimizer)
+    optimizer = _wrap_safety(optimizer, args)
+
+    coordinator = AgentCoordinator() if getattr(args, "coordinator", False) else None
+    if coordinator:
+        print("  Multi-node coordinator enabled (POST /agent/<id>/stats, GET /agents)")
+
+    app = create_app(optimizer=optimizer, coordinator=coordinator)
 
     print(f"\n  Smart Bandwidth Optimizer – Telemetry Server")
     print(f"  Dashboard: http://{args.host}:{args.port}/")
@@ -246,6 +270,29 @@ def cmd_serve(args: argparse.Namespace) -> None:
     print(f"  Press Ctrl-C to stop.\n")
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+
+
+def cmd_bench(args: argparse.Namespace) -> None:
+    """Run a performance benchmark and print the results."""
+    from bandwidth_optimizer.benchmark import BenchmarkConfig, Benchmarker
+
+    optimizer = _build_optimizer(args)
+
+    cfg = BenchmarkConfig(
+        n_packets=args.packets,
+        packet_size_bytes=args.pkt_size,
+        warmup_packets=min(200, args.packets // 10),
+        measure_stages=True,
+    )
+
+    print(f"\n  Running benchmark: {cfg.n_packets:,} packets "
+          f"({cfg.packet_size_bytes}B each, {cfg.warmup_packets} warmup)…")
+
+    result = Benchmarker.run(optimizer=optimizer, cfg=cfg)
+    print(result.summary())
+
+    if args.json:
+        print(json.dumps(result.to_dict(), indent=2))
 
 
 # ─────────────────────────── CLI parser ──────────────────────────────────────
@@ -274,6 +321,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Path to a YAML policy file (overrides built-in classification rules)",
     )
+    parser.add_argument(
+        "--fail-mode",
+        dest="fail_mode",
+        choices=[m.value for m in FailMode],
+        default=None,
+        help=(
+            "Wrap the optimizer in a SafetyGuard with this fail mode "
+            "(fail_open = forward unchanged on error; fail_closed = drop on error)"
+        ),
+    )
+    parser.add_argument(
+        "--circuit-threshold",
+        dest="circuit_threshold",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Consecutive errors before circuit-breaker trips (default: 5)",
+    )
 
     sub = parser.add_subparsers(dest="command")
 
@@ -295,6 +360,35 @@ def build_parser() -> argparse.ArgumentParser:
     )
     srv_p.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
     srv_p.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
+    srv_p.add_argument(
+        "--coordinator",
+        action="store_true",
+        default=False,
+        help="Enable multi-node coordinator (POST /agent/<id>/stats, GET /agents)",
+    )
+
+    bench_p = sub.add_parser("bench", help="Run a performance benchmark.")
+    bench_p.add_argument(
+        "--packets",
+        type=int,
+        default=10_000,
+        metavar="N",
+        help="Number of packets to process (default: 10000)",
+    )
+    bench_p.add_argument(
+        "--pkt-size",
+        dest="pkt_size",
+        type=int,
+        default=512,
+        metavar="BYTES",
+        help="Packet payload size in bytes (default: 512; 0 = random 64–1500)",
+    )
+    bench_p.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Also print full JSON result after the summary",
+    )
 
     return parser
 
@@ -311,6 +405,8 @@ def main(argv=None) -> int:
         cmd_stats(args)
     elif args.command == "serve":
         cmd_serve(args)
+    elif args.command == "bench":
+        cmd_bench(args)
     else:
         parser.print_help()
 

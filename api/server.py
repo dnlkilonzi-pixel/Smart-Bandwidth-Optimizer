@@ -41,6 +41,8 @@ from bandwidth_optimizer import (
     Packet,
     TrafficPriority,
 )
+from bandwidth_optimizer.coordinator import AgentCoordinator
+from bandwidth_optimizer.safety import HealthStatus, SafetyGuard
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -124,7 +126,10 @@ def _run_simulation(optimizer: BandwidthOptimizer, stop_event: threading.Event) 
 
 # ─────────────────────────── app factory ─────────────────────────────────────
 
-def create_app(optimizer: Optional[BandwidthOptimizer] = None) -> FastAPI:
+def create_app(
+    optimizer: Optional[BandwidthOptimizer] = None,
+    coordinator: Optional[AgentCoordinator] = None,
+) -> FastAPI:
     """
     Create and return the FastAPI application.
 
@@ -134,6 +139,10 @@ def create_app(optimizer: Optional[BandwidthOptimizer] = None) -> FastAPI:
         An existing ``BandwidthOptimizer`` instance to expose via the API.
         If ``None`` a default instance is created and a background simulation
         thread is started automatically.
+    coordinator:
+        An optional ``AgentCoordinator`` instance.  When provided, the
+        ``POST /agent/{node_id}/stats`` and ``GET /agents`` endpoints are
+        activated so remote ``NodeAgent`` instances can register.
     """
     _optimizer = optimizer or BandwidthOptimizer(
         OptimizerConfig(compression_threshold_bytes=128)
@@ -141,6 +150,7 @@ def create_app(optimizer: Optional[BandwidthOptimizer] = None) -> FastAPI:
     _manager = _ConnectionManager()
     _stop_sim = threading.Event()
     _run_sim = optimizer is None
+    _coordinator = coordinator  # may be None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -190,7 +200,48 @@ def create_app(optimizer: Optional[BandwidthOptimizer] = None) -> FastAPI:
 
     @app.get("/health", summary="Health check")
     async def health() -> dict:
-        return {"status": "ok", "ws_clients": _manager.connection_count()}
+        base: dict = {"status": "ok", "ws_clients": _manager.connection_count()}
+        # If optimizer is wrapped in a SafetyGuard, include safety health
+        if isinstance(_optimizer, SafetyGuard):
+            base["safety"] = _optimizer.health().to_dict()
+        return base
+
+    # ── multi-node agent endpoints ────────────────────────────────────────
+
+    @app.post(
+        "/agent/{node_id}/stats",
+        summary="Receive heartbeat stats from a NodeAgent",
+        include_in_schema=_coordinator is not None,
+    )
+    async def receive_agent_stats(node_id: str, stats: dict) -> dict:
+        """
+        Accept a stats heartbeat from a remote ``NodeAgent``.
+
+        The payload is the JSON-serialised dict returned by
+        ``NodeAgent.stats()``.  Returns 200 with ``{"ok": true}`` on success.
+        Requires a coordinator to be configured; returns 404 otherwise.
+        """
+        if _coordinator is None:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Coordinator not configured")
+        _coordinator.ingest(node_id, stats)
+        return {"ok": True, "node_id": node_id}
+
+    @app.get(
+        "/agents",
+        summary="List all registered NodeAgents",
+        include_in_schema=_coordinator is not None,
+    )
+    async def get_agents() -> dict:
+        """
+        Return all live agents registered with the coordinator.
+
+        Agents that haven't sent a heartbeat within the TTL are excluded.
+        """
+        if _coordinator is None:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Coordinator not configured")
+        return _coordinator.all_agents()
 
     # ── WebSocket streaming ───────────────────────────────────────────────
 

@@ -1,0 +1,46 @@
+[Unit]
+Description=Smart Bandwidth Optimizer – traffic shaping agent
+Documentation=https://github.com/dnlkilonzi-pixel/Smart-Bandwidth-Optimizer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# ── Identity ────────────────────────────────────────────────────────────────
+User=bwopt
+Group=bwopt
+
+# ── Paths ───────────────────────────────────────────────────────────────────
+WorkingDirectory=/opt/bandwidth-optimizer
+ExecStart=/opt/bandwidth-optimizer/venv/bin/python main.py serve \
+    --host 0.0.0.0 \
+    --port 8000
+
+# Uncomment to load a custom YAML policy:
+# ExecStart=/opt/bandwidth-optimizer/venv/bin/python main.py \
+#     --policy /etc/bandwidth-optimizer/policy.yaml serve \
+#     --host 0.0.0.0 --port 8000
+
+# ── Restart behaviour ────────────────────────────────────────────────────────
+Restart=on-failure
+RestartSec=5s
+StartLimitBurst=5
+StartLimitIntervalSec=60s
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bandwidth-optimizer
+
+# ── Security hardening ───────────────────────────────────────────────────────
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/bandwidth-optimizer
+
+# Capabilities: NET_ADMIN required only for NFQUEUE / raw-socket capture.
+# Remove if using SimulatedCapture or LibpcapCapture in read-only mode.
+# AmbientCapabilities=CAP_NET_ADMIN
+
+[Install]
+WantedBy=multi-user.target
