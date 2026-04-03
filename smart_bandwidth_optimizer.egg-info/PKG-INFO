@@ -1,8 +1,0 @@
-Metadata-Version: 2.1
-Name: smart-bandwidth-optimizer
-Version: 1.0.0
-Summary: A system that prioritizes important traffic, compresses data, and drops unnecessary packets to optimize bandwidth usage.
-Classifier: Programming Language :: Python :: 3
-Classifier: Operating System :: OS Independent
-Requires-Python: >=3.9
-Provides-Extra: dev
