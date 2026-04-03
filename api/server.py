@@ -110,7 +110,7 @@ def _run_simulation(optimizer: BandwidthOptimizer, stop_event: threading.Event) 
                 src_port=random.randint(1024, 65535),
                 dst_port=ports[idx],
                 protocol=protos[idx],
-                payload=bytes([random.getrandbits(8)] * size),
+                payload=random.randbytes(size),
                 size_bytes=size,
             )
             optimizer.process(pkt)

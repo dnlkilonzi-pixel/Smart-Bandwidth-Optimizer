@@ -99,7 +99,6 @@ def _make_demo_packets() -> List[Packet]:
 
 def cmd_demo(args: argparse.Namespace) -> None:
     """Process demo packets and print a stats report."""
-    mode = DeploymentMode(args.mode)
     optimizer = _build_optimizer(
         args, max_queue_size=64, compression_threshold_bytes=64
     )
@@ -107,7 +106,7 @@ def cmd_demo(args: argparse.Namespace) -> None:
     packets = _make_demo_packets()
     print(f"\n{'=' * 60}")
     print(f"  Smart Bandwidth Optimizer – Demo")
-    print(f"  Mode: {mode.value}  |  Bandwidth: {args.bw:,} B/s")
+    print(f"  Mode: {optimizer.config.mode.value}  |  Bandwidth: {args.bw:,} B/s")
     print(f"{'=' * 60}\n")
 
     for pkt in packets:
@@ -186,7 +185,7 @@ def cmd_simulate(args: argparse.Namespace) -> None:
                     src_port=random.randint(1024, 65535),
                     dst_port=ports[idx],
                     protocol=protos[idx],
-                    payload=bytes(random.getrandbits(8) for _ in range(size)),
+                    payload=random.randbytes(size),
                     size_bytes=size,
                 )
                 optimizer.process(pkt)
