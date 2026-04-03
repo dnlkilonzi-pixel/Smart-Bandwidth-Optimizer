@@ -32,6 +32,30 @@ from bandwidth_optimizer import (
     Packet,
     TrafficPriority,
 )
+from bandwidth_optimizer.classifier import TrafficClassifier
+from bandwidth_optimizer.policy import PolicyLoadError, PolicyLoader
+
+
+# ─────────────────────────── helpers ─────────────────────────────────────────
+
+def _build_optimizer(args: argparse.Namespace, **cfg_kwargs) -> BandwidthOptimizer:
+    """Build an optimizer, optionally loading a YAML policy file."""
+    mode = DeploymentMode(args.mode)
+    cfg = OptimizerConfig(mode=mode, total_bandwidth_bps=args.bw, **cfg_kwargs)
+    optimizer = BandwidthOptimizer(config=cfg)
+
+    policy_path = getattr(args, "policy", None)
+    if policy_path:
+        try:
+            policy = PolicyLoader.load_file(policy_path)
+        except (OSError, PolicyLoadError) as exc:
+            print(f"Error loading policy file: {exc}", file=sys.stderr)
+            sys.exit(1)
+        optimizer.classifier._rules = policy.to_classification_rules()
+        optimizer.classifier._default_priority = policy.default_priority
+        print(f"  Loaded {len(policy.rules)} rules from {policy_path}")
+
+    return optimizer
 
 
 # ─────────────────────────── demo helpers ────────────────────────────────────
@@ -76,13 +100,9 @@ def _make_demo_packets() -> List[Packet]:
 def cmd_demo(args: argparse.Namespace) -> None:
     """Process demo packets and print a stats report."""
     mode = DeploymentMode(args.mode)
-    cfg = OptimizerConfig(
-        mode=mode,
-        total_bandwidth_bps=args.bw,
-        max_queue_size=64,
-        compression_threshold_bytes=64,
+    optimizer = _build_optimizer(
+        args, max_queue_size=64, compression_threshold_bytes=64
     )
-    optimizer = BandwidthOptimizer(config=cfg)
 
     packets = _make_demo_packets()
     print(f"\n{'=' * 60}")
@@ -131,14 +151,9 @@ def cmd_simulate(args: argparse.Namespace) -> None:
     """
     import random
 
-    mode = DeploymentMode(args.mode)
-    cfg = OptimizerConfig(
-        mode=mode,
-        total_bandwidth_bps=args.bw,
-        max_queue_size=128,
-        compression_threshold_bytes=128,
+    optimizer = _build_optimizer(
+        args, max_queue_size=128, compression_threshold_bytes=128
     )
-    optimizer = BandwidthOptimizer(config=cfg)
 
     # Traffic mix: (dst_port, protocol, weight)
     traffic_templates = [
@@ -201,12 +216,37 @@ def cmd_simulate(args: argparse.Namespace) -> None:
 
 def cmd_stats(args: argparse.Namespace) -> None:
     """Print a JSON stats snapshot after running demo packets."""
-    mode = DeploymentMode(args.mode)
-    cfg = OptimizerConfig(mode=mode, total_bandwidth_bps=args.bw)
-    optimizer = BandwidthOptimizer(config=cfg)
+    optimizer = _build_optimizer(args)
     for pkt in _make_demo_packets():
         optimizer.process(pkt)
     print(json.dumps(optimizer.stats(), indent=2, default=str))
+
+
+def cmd_serve(args: argparse.Namespace) -> None:
+    """Start the FastAPI telemetry server with a live dashboard."""
+    try:
+        import uvicorn
+    except ImportError:
+        print(
+            "uvicorn is required to run the server.\n"
+            "Install it with: pip install uvicorn[standard]",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    from api.server import create_app
+
+    optimizer = _build_optimizer(args)
+    app = create_app(optimizer=optimizer)
+
+    print(f"\n  Smart Bandwidth Optimizer – Telemetry Server")
+    print(f"  Dashboard: http://{args.host}:{args.port}/")
+    print(f"  Stats API: http://{args.host}:{args.port}/stats")
+    print(f"  Flows API: http://{args.host}:{args.port}/flows")
+    print(f"  WebSocket: ws://{args.host}:{args.port}/ws")
+    print(f"  Press Ctrl-C to stop.\n")
+
+    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 
 # ─────────────────────────── CLI parser ──────────────────────────────────────
@@ -229,6 +269,12 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="BYTES_PER_SEC",
         help="Total bandwidth limit in bytes/second (default: 10485760 = 10 MB/s)",
     )
+    parser.add_argument(
+        "--policy",
+        metavar="FILE",
+        default=None,
+        help="Path to a YAML policy file (overrides built-in classification rules)",
+    )
 
     sub = parser.add_subparsers(dest="command")
 
@@ -244,6 +290,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Seconds between simulation iterations (default: 0.1)",
     )
 
+    srv_p = sub.add_parser(
+        "serve",
+        help="Start the FastAPI telemetry server with a live dashboard.",
+    )
+    srv_p.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
+    srv_p.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
+
     return parser
 
 
@@ -257,6 +310,8 @@ def main(argv=None) -> int:
         cmd_simulate(args)
     elif args.command == "stats":
         cmd_stats(args)
+    elif args.command == "serve":
+        cmd_serve(args)
     else:
         parser.print_help()
 

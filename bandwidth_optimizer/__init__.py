@@ -12,8 +12,10 @@ from .config import (
     OptimizerConfig,
     TrafficPriority,
 )
+from .flow_tracker import FlowKey, FlowRecord, FlowTracker
 from .optimizer import BandwidthOptimizer, ProcessResult
 from .packet_filter import DropDecision, PacketFilter, TokenBucket
+from .policy import Policy, PolicyLoadError, PolicyLoader, PolicyRule
 from .scheduler import PriorityScheduler
 
 __all__ = [
@@ -35,6 +37,15 @@ __all__ = [
     "DropDecision",
     # scheduler
     "PriorityScheduler",
+    # flow tracker
+    "FlowKey",
+    "FlowRecord",
+    "FlowTracker",
+    # policy DSL
+    "PolicyRule",
+    "Policy",
+    "PolicyLoader",
+    "PolicyLoadError",
     # orchestrator
     "BandwidthOptimizer",
     "ProcessResult",

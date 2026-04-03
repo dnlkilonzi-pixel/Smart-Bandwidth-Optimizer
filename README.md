@@ -1,6 +1,6 @@
 # Smart-Bandwidth-Optimizer
 
-A lightweight, pure-Python system that optimises bandwidth by **prioritising important traffic**, **compressing data**, and **dropping unnecessary packets**.
+A production-grade Python system that optimises bandwidth by **prioritising important traffic**, **compressing data**, **dropping unnecessary packets**, **tracking flows**, and exposing **real-time telemetry**.
 
 Designed to run on a **router**, **local server**, or **ISP edge node**.
 
@@ -10,11 +10,13 @@ Designed to run on a **router**, **local server**, or **ISP edge node**.
 
 | Feature | Description |
 |---|---|
-| 🚦 Traffic Prioritization | Classifies packets (VoIP → CRITICAL, HTTPS → HIGH, BitTorrent → BACKGROUND) and serves them in strict priority order |
-| 📦 Data Compression | Compresses large payloads with zlib/DEFLATE; skips already-compressed or tiny payloads automatically |
-| 🗑️ Packet Dropping | Token-bucket rate limiting per priority class + RED (Random Early Detection) for queue-pressure drop |
-| ⚙️ Configurable | Tune bandwidth limits, queue depth, compression level, RED thresholds, and per-class budgets |
-| 📊 Statistics | Live counters for packets received/dropped, bytes saved, queue fill, and per-priority drop counts |
+| 🚦 Traffic Prioritization | Rule-based classifier (VoIP → CRITICAL, HTTPS → HIGH, BitTorrent → BACKGROUND); strict priority-queue forwarding |
+| 📦 Data Compression | zlib/DEFLATE payload compression; skips already-compressed or too-small payloads |
+| 🗑️ Packet Dropping | Per-priority token-bucket rate limiting + RED (Random Early Detection) |
+| 🔀 Flow Intelligence | 5-tuple flow tracking with latency/bandwidth/burst scoring; auto-adjusts priority per flow behaviour |
+| 📋 YAML Policy DSL | Define classification rules in YAML – no Python required; supports ports, protocols, regex payload patterns, bandwidth hints |
+| 📡 Real-time Telemetry | FastAPI backend with REST + WebSocket streaming; built-in live dashboard |
+| 🔌 Capture Abstraction | Pluggable backends: `SimulatedCapture`, `NFQueueCapture` (Linux NFQUEUE), `LibpcapCapture` (scapy/libpcap) |
 
 ---
 
@@ -24,9 +26,17 @@ Designed to run on a **router**, **local server**, or **ISP edge node**.
 Incoming packet
        │
        ▼
-┌─────────────────┐
-│  TrafficClassifier │  → assigns TrafficPriority (CRITICAL/HIGH/MEDIUM/LOW/BACKGROUND)
-└────────┬────────┘
+┌──────────────────┐
+│   FlowTracker    │  → 5-tuple flow table; latency/bandwidth/burst scoring
+└────────┬─────────┘
+         │
+         ▼
+┌─────────────────────┐
+│  TrafficClassifier  │  → rule-based priority (CRITICAL/HIGH/MEDIUM/LOW/BACKGROUND)
+│  (+ PolicyLoader)   │    rules can come from YAML policy file
+└────────┬────────────┘
+         │
+         ▼  flow score adjusts priority (boost latency-sensitive / demote bulk)
          │
          ▼
 ┌─────────────────┐
@@ -34,14 +44,17 @@ Incoming packet
 └────────┬────────┘
          │ (not dropped)
          ▼
-┌─────────────────┐
-│ PayloadCompressor│  → zlib compress if payload is large enough and compressible
-└────────┬────────┘
+┌─────────────────────┐
+│ PayloadCompressor   │  → zlib compress if large enough and compressible
+└────────┬────────────┘
          │
          ▼
-┌─────────────────┐
-│ PriorityScheduler│  → priority queue; dequeue in CRITICAL-first order
-└─────────────────┘
+┌──────────────────────┐
+│  PriorityScheduler   │  → priority heap; CRITICAL-first forwarding
+└──────────────────────┘
+         │
+         ▼
+  FastAPI /ws (WebSocket telemetry) → live dashboard
 ```
 
 ### Modules
@@ -50,27 +63,38 @@ Incoming packet
 |---|---|
 | `bandwidth_optimizer/config.py` | `DeploymentMode`, `TrafficPriority`, `OptimizerConfig` |
 | `bandwidth_optimizer/classifier.py` | `Packet`, `TrafficClassifier`, `ClassificationRule` |
-| `bandwidth_optimizer/compressor.py` | `PayloadCompressor` – zlib-based compression/decompression |
+| `bandwidth_optimizer/compressor.py` | `PayloadCompressor` – zlib-based compression |
 | `bandwidth_optimizer/packet_filter.py` | `TokenBucket`, `PacketFilter` – rate limiting + RED |
 | `bandwidth_optimizer/scheduler.py` | `PriorityScheduler` – thread-safe priority queue |
+| `bandwidth_optimizer/flow_tracker.py` | `FlowKey`, `FlowRecord`, `FlowTracker` – 5-tuple flow intelligence |
+| `bandwidth_optimizer/policy.py` | `PolicyLoader` – YAML policy DSL → `ClassificationRule` objects |
 | `bandwidth_optimizer/optimizer.py` | `BandwidthOptimizer` – orchestrates all stages |
+| `bandwidth_optimizer/capture/` | Capture backends: `SimulatedCapture`, `NFQueueCapture`, `LibpcapCapture` |
+| `api/server.py` | FastAPI REST + WebSocket telemetry server |
+| `api/static/index.html` | Live dashboard (vanilla JS, no build step) |
 
 ---
 
 ## Quick Start
 
 ```bash
-# Install (no external dependencies needed at runtime)
+# Install runtime dependencies
 pip install -e .
 
 # Run demo packets through the optimizer
 python main.py demo
+
+# Use a custom YAML policy file
+python main.py --policy policy_example.yaml demo
 
 # Specify deployment mode and bandwidth limit (5 MB/s, router mode)
 python main.py --mode router --bw 5242880 demo
 
 # Live simulation (Ctrl-C to stop)
 python main.py simulate
+
+# Start the telemetry server + dashboard (http://localhost:8000/)
+python main.py serve
 
 # JSON stats snapshot
 python main.py stats
@@ -94,10 +118,68 @@ packet = Packet(dst_port=443, protocol="tcp", payload=b"..." * 100)
 result = optimizer.process(packet)
 
 if not result.dropped:
-    # Forward the (possibly compressed) packet
-    forward(result.packet)
+    forward(result.packet)   # payload may be compressed
+
+# Inspect flow information
+print(result.flow_record.latency_score)   # 0.0–1.0
+print(result.flow_record.bandwidth_score) # 0.0–1.0
 
 print(optimizer.stats())
+# → includes flows.active count
+```
+
+### Using a YAML policy file
+
+```yaml
+# my_policy.yaml
+version: "1"
+defaults:
+  priority: MEDIUM
+rules:
+  - name: zoom_video
+    description: "Zoom video conferencing"
+    match:
+      ports: [8801, 8802]
+      protocols: [udp]
+    priority: CRITICAL
+    bandwidth_min_pct: 30
+  - name: bittorrent
+    match:
+      ports: [6881, 6882, 6883]
+      protocols: [tcp, udp]
+    priority: BACKGROUND
+```
+
+```bash
+python main.py --policy my_policy.yaml serve
+```
+
+### Real packet capture (Linux)
+
+```bash
+# 1. Install NFQUEUE binding
+pip install netfilterqueue
+
+# 2. Redirect traffic to queue 0
+sudo iptables -I INPUT   -j NFQUEUE --queue-num 0
+sudo iptables -I OUTPUT  -j NFQUEUE --queue-num 0
+sudo iptables -I FORWARD -j NFQUEUE --queue-num 0
+
+# 3. Run the optimizer (must be root)
+sudo python -c "
+from bandwidth_optimizer import BandwidthOptimizer
+from bandwidth_optimizer.capture import NFQueueCapture
+
+optimizer = BandwidthOptimizer()
+with NFQueueCapture(queue_num=0) as cap:
+    for captured in cap.packets():
+        result = optimizer.process(captured.packet)
+        if captured.nfqueue_handle:
+            if result.dropped:
+                captured.nfqueue_handle.drop()
+            else:
+                captured.nfqueue_handle.accept()
+"
 ```
 
 ---
@@ -112,7 +194,21 @@ print(optimizer.stats())
 | LOW | 4 | FTP (21), NTP (123) |
 | BACKGROUND | 5 | BitTorrent (6881–6889) |
 
-Default bandwidth budgets: CRITICAL 30 %, HIGH 30 %, MEDIUM 20 %, LOW 10 %, BACKGROUND 5 %.
+Default bandwidth budgets: CRITICAL 30%, HIGH 30%, MEDIUM 20%, LOW 10%, BACKGROUND 5%.
+
+---
+
+## Flow Intelligence
+
+Each unique 5-tuple (src_ip, dst_ip, src_port, dst_port, protocol) is tracked as a **flow**. Three scores are computed from flow history:
+
+| Score | Range | High score means… |
+|---|---|---|
+| `latency_score` | 0–1 | Small, frequent packets → VoIP/gaming pattern → boost priority |
+| `bandwidth_score` | 0–1 | High byte rate → bulk transfer → demote priority |
+| `burst_score` | 0–1 | Packets arrive in bursts rather than at steady rate |
+
+`FlowTracker.priority_hint()` automatically adjusts priority by one level up (latency-sensitive) or down (bandwidth-heavy) based on configured thresholds.
 
 ---
 
@@ -126,18 +222,45 @@ Default bandwidth budgets: CRITICAL 30 %, HIGH 30 %, MEDIUM 20 %, LOW 10 %, BACK
 
 ---
 
+## Telemetry API
+
+Start the server:
+```bash
+python main.py serve --host 0.0.0.0 --port 8000
+```
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/` | GET | Live dashboard (HTML) |
+| `/stats` | GET | JSON statistics snapshot |
+| `/flows` | GET | All active flows with scoring |
+| `/health` | GET | Health check |
+| `/ws` | WebSocket | Push stats every second |
+
+---
+
 ## Running Tests
 
 ```bash
-pip install pytest
+pip install pytest httpx
 pytest tests/ -v
 ```
 
-82 tests covering config, classification, compression, packet filtering (token bucket + RED), the priority scheduler, and the end-to-end optimizer pipeline.
+152 tests covering all modules end-to-end.
 
 ---
 
 ## How Dropping Works
 
-1. **Token Bucket** – each priority class has its own bucket that refills at a rate proportional to its bandwidth budget. A packet may only pass if the bucket has enough tokens (bytes). CRITICAL packets are never dropped by the rate limiter.
-2. **RED (Random Early Detection)** – once the queue reaches `red_min_threshold` (default 50 % full), incoming non-CRITICAL packets are probabilistically dropped. Above `red_max_threshold` (default 90 %) all are dropped. This provides early backpressure before the queue fills completely.
+1. **Token Bucket** – each priority class has its own bucket refilling at a rate proportional to its bandwidth budget. CRITICAL packets are never rate-limited.
+2. **RED (Random Early Detection)** – once the queue reaches `red_min_threshold` (default 50% full), incoming non-CRITICAL packets are probabilistically dropped. Above `red_max_threshold` (default 90%) all are dropped.
+
+---
+
+## Capture Backends
+
+| Backend | Platform | Requires |
+|---|---|---|
+| `SimulatedCapture` | Any | Nothing (built-in) |
+| `NFQueueCapture` | Linux only | `pip install netfilterqueue` + root + iptables rule |
+| `LibpcapCapture` | Cross-platform | `pip install scapy` + libpcap + root (live capture) |

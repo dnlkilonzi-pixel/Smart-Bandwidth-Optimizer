@@ -20,6 +20,7 @@ from typing import Iterator, List, Optional
 from .classifier import Packet, TrafficClassifier
 from .compressor import PayloadCompressor
 from .config import DeploymentMode, OptimizerConfig, TrafficPriority
+from .flow_tracker import FlowRecord, FlowTracker
 from .packet_filter import DropDecision, PacketFilter
 from .scheduler import PriorityScheduler
 
@@ -33,6 +34,7 @@ class ProcessResult:
     compressed: bool = False
     original_payload_size: int = 0
     compressed_payload_size: int = 0
+    flow_record: Optional[FlowRecord] = None
 
     @property
     def bytes_saved(self) -> int:
@@ -71,6 +73,7 @@ class BandwidthOptimizer:
             config=self._config,
             current_queue_size_fn=lambda: len(self._scheduler),
         )
+        self._flow_tracker = FlowTracker()
         # Running totals
         self._total_in: int = 0
         self._total_dropped: int = 0
@@ -87,9 +90,18 @@ class BandwidthOptimizer:
         """
         self._total_in += 1
 
+        # Stage 0 – flow tracking (update stats before classification)
+        flow_record = self._flow_tracker.update(packet)
+
         # Stage 1 – classify
         if packet.priority is None:
             self._classifier.classify(packet)
+
+        # Stage 1b – flow-aware priority adjustment
+        if packet.priority is not None:
+            packet.priority = self._flow_tracker.priority_hint(
+                packet.priority, flow_record
+            )
 
         # Stage 2 – filter / drop
         decision: DropDecision = self._packet_filter.should_drop(packet)
@@ -99,6 +111,7 @@ class BandwidthOptimizer:
                 packet=packet,
                 dropped=True,
                 drop_reason=decision.reason,
+                flow_record=flow_record,
             )
 
         # Stage 3 – compress payload
@@ -118,6 +131,7 @@ class BandwidthOptimizer:
             compressed=result.was_compressed,
             original_payload_size=original_size,
             compressed_payload_size=len(packet.payload),
+            flow_record=flow_record,
         )
 
     def process_batch(self, packets: List[Packet]) -> List[ProcessResult]:
@@ -169,6 +183,9 @@ class BandwidthOptimizer:
             "drops_by_priority": {
                 p.name: count for p, count in drop_counts.items()
             },
+            "flows": {
+                "active": self._flow_tracker.flow_count(),
+            },
         }
 
     def reset_stats(self) -> None:
@@ -192,3 +209,7 @@ class BandwidthOptimizer:
     @property
     def compressor(self) -> PayloadCompressor:
         return self._compressor
+
+    @property
+    def flow_tracker(self) -> FlowTracker:
+        return self._flow_tracker
