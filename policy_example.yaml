@@ -1,0 +1,117 @@
+# Smart Bandwidth Optimizer – Example Policy File
+#
+# Load this file with:
+#   python main.py --policy policy_example.yaml demo
+#
+# Rules are evaluated top-to-bottom; the first matching rule wins.
+# Packets that match no rule get the 'defaults.priority'.
+
+version: "1"
+
+defaults:
+  priority: MEDIUM
+
+  # Per-priority bandwidth budget (fractions must sum to ≤ 1.0)
+  bandwidth_budget:
+    CRITICAL:   0.30
+    HIGH:       0.30
+    MEDIUM:     0.20
+    LOW:        0.10
+    BACKGROUND: 0.05
+
+rules:
+  # ── CRITICAL – real-time voice and video ─────────────────────────────────
+  - name: voip_sip
+    description: "SIP signalling (VoIP call setup)"
+    match:
+      ports: [5060, 5061]
+      protocols: [udp, tcp]
+    priority: CRITICAL
+
+  - name: voip_rtp
+    description: "RTP media streams (VoIP / video conferencing)"
+    match:
+      ports: [5004, 5005]
+      protocols: [udp]
+    priority: CRITICAL
+
+  - name: icmp_diagnostics
+    description: "ICMP (ping, traceroute, unreachables)"
+    match:
+      protocols: [icmp]
+    priority: CRITICAL
+
+  # ── HIGH – interactive web traffic ───────────────────────────────────────
+  - name: dns
+    description: "DNS name resolution"
+    match:
+      ports: [53]
+      protocols: [udp, tcp]
+    priority: HIGH
+
+  - name: https
+    description: "HTTPS / TLS encrypted web traffic"
+    match:
+      ports: [443]
+      protocols: [tcp]
+    priority: HIGH
+    bandwidth_min_pct: 25
+
+  - name: ssh
+    description: "SSH remote administration"
+    match:
+      ports: [22]
+      protocols: [tcp]
+    priority: HIGH
+
+  - name: http
+    description: "Plain HTTP web traffic"
+    match:
+      ports: [80, 8080]
+      protocols: [tcp]
+    priority: HIGH
+
+  # ── MEDIUM – asynchronous messaging ──────────────────────────────────────
+  - name: email
+    description: "Email (SMTP, IMAP, POP3)"
+    match:
+      ports: [25, 465, 587, 993, 995, 110, 143]
+      protocols: [tcp]
+    priority: MEDIUM
+
+  - name: xmpp_chat
+    description: "XMPP / Jabber instant messaging"
+    match:
+      ports: [5222, 5269]
+      protocols: [tcp]
+    priority: MEDIUM
+
+  # ── LOW – background maintenance ─────────────────────────────────────────
+  - name: ftp_transfers
+    description: "FTP file transfers and FTPS"
+    match:
+      ports: [20, 21, 989, 990]
+      protocols: [tcp]
+    priority: LOW
+
+  - name: ntp_time_sync
+    description: "NTP time synchronisation"
+    match:
+      ports: [123]
+      protocols: [udp]
+    priority: LOW
+
+  # ── BACKGROUND – bulk / peer-to-peer ─────────────────────────────────────
+  - name: bittorrent
+    description: "BitTorrent peer-to-peer file sharing"
+    match:
+      ports: [6881, 6882, 6883, 6884, 6885, 6886, 6887, 6888, 6889]
+      protocols: [tcp, udp]
+    priority: BACKGROUND
+
+  - name: bittorrent_dht
+    description: "BitTorrent DHT tracker"
+    match:
+      ports: [6969]
+      protocols: [udp]
+    priority: BACKGROUND

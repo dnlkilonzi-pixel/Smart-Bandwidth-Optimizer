@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Bandwidth Optimizer – Live Dashboard</title>
+  <style>
+    /* ── reset & base ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #fff; }
+    h2 { font-size: 0.9rem; font-weight: 600; text-transform: uppercase;
+         letter-spacing: .08em; color: #94a3b8; margin-bottom: .75rem; }
+
+    /* ── layout ───────────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    #status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #ef4444; flex-shrink: 0;
+      transition: background .3s;
+    }
+    #status-dot.connected { background: #22c55e; }
+    #status-text { font-size: .8rem; color: #94a3b8; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── stat cards ───────────────────────────────────────────────── */
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3348;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+    }
+    .card .value {
+      font-size: 2rem; font-weight: 700; color: #fff;
+      line-height: 1.1; margin-bottom: .25rem;
+    }
+    .card .label { font-size: .75rem; color: #94a3b8; }
+
+    /* ── priority bar chart ────────────────────────────────────────── */
+    .chart-card {
+      background: #1e2130;
+      border: 1px solid #2d3348;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .bar-row {
+      display: flex; align-items: center; gap: .6rem;
+      margin-bottom: .5rem;
+    }
+    .bar-label { width: 90px; font-size: .78rem; color: #cbd5e1; flex-shrink: 0; }
+    .bar-track {
+      flex: 1; height: 18px; background: #2d3348;
+      border-radius: 4px; overflow: hidden; position: relative;
+    }
+    .bar-fill {
+      height: 100%; border-radius: 4px;
+      transition: width .6s ease;
+    }
+    .bar-count {
+      width: 55px; text-align: right;
+      font-size: .75rem; color: #94a3b8; flex-shrink: 0;
+    }
+
+    /* priority colours */
+    .bar-CRITICAL   { background: #ef4444; }
+    .bar-HIGH       { background: #f97316; }
+    .bar-MEDIUM     { background: #eab308; }
+    .bar-LOW        { background: #22c55e; }
+    .bar-BACKGROUND { background: #6366f1; }
+
+    /* ── queue fill gauge ─────────────────────────────────────────── */
+    #queue-fill-track {
+      height: 20px; background: #2d3348; border-radius: 10px;
+      overflow: hidden; margin-bottom: .3rem;
+    }
+    #queue-fill-bar {
+      height: 100%; border-radius: 10px;
+      background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+      transition: width .6s ease;
+    }
+    #queue-fill-label { font-size: .75rem; color: #94a3b8; }
+
+    /* ── sparkline ────────────────────────────────────────────────── */
+    canvas { width: 100%; border-radius: 6px; }
+    .spark-card {
+      background: #1e2130;
+      border: 1px solid #2d3348;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 1rem;
+    }
+
+    /* ── flows table ──────────────────────────────────────────────── */
+    #flows-section { margin-top: 1rem; }
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: .78rem;
+    }
+    th, td {
+      padding: .45rem .6rem; text-align: left;
+      border-bottom: 1px solid #2d3348;
+    }
+    th { color: #94a3b8; font-weight: 600; }
+    td { color: #cbd5e1; }
+    tr:hover td { background: #252a3a; }
+    .score-bar {
+      display: inline-block; height: 8px; border-radius: 3px;
+      vertical-align: middle; margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div id="status-dot"></div>
+  <h1>Smart Bandwidth Optimizer</h1>
+  <span id="status-text">Connecting…</span>
+</header>
+
+<!-- ── KPI cards ────────────────────────────────────────────────────── -->
+<div class="grid">
+  <div class="card">
+    <div class="value" id="kpi-recv">–</div>
+    <div class="label">Packets Received</div>
+  </div>
+  <div class="card">
+    <div class="value" id="kpi-drop">–</div>
+    <div class="label">Packets Dropped</div>
+  </div>
+  <div class="card">
+    <div class="value" id="kpi-droprate">–</div>
+    <div class="label">Drop Rate</div>
+  </div>
+  <div class="card">
+    <div class="value" id="kpi-saved">–</div>
+    <div class="label">Bytes Saved (Compression)</div>
+  </div>
+  <div class="card">
+    <div class="value" id="kpi-flows">–</div>
+    <div class="label">Active Flows</div>
+  </div>
+  <div class="card">
+    <div class="value" id="kpi-queue">–</div>
+    <div class="label">Queue Size</div>
+  </div>
+</div>
+
+<!-- ── queue fill ────────────────────────────────────────────────────── -->
+<div class="chart-card">
+  <h2>Queue Fill</h2>
+  <div id="queue-fill-track"><div id="queue-fill-bar" style="width:0%"></div></div>
+  <div id="queue-fill-label">0%</div>
+</div>
+
+<!-- ── packets / sec sparkline ───────────────────────────────────────── -->
+<div class="spark-card">
+  <h2>Packets Received / s</h2>
+  <canvas id="spark" height="60"></canvas>
+</div>
+
+<!-- ── per-priority enqueue bars ─────────────────────────────────────── -->
+<div class="chart-card">
+  <h2>Enqueued Packets by Priority</h2>
+  <div id="prio-bars"></div>
+</div>
+
+<!-- ── active flows ──────────────────────────────────────────────────── -->
+<div id="flows-section">
+  <div class="chart-card">
+    <h2>Active Flows (<span id="flow-count">0</span>)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Flow</th>
+          <th>Protocol</th>
+          <th>Packets</th>
+          <th>Bytes</th>
+          <th>Latency</th>
+          <th>Bandwidth</th>
+          <th>Burst</th>
+        </tr>
+      </thead>
+      <tbody id="flows-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ── helpers ──────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n >= 1e9) return (n/1e9).toFixed(1)+'G';
+  if (n >= 1e6) return (n/1e6).toFixed(1)+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+  return String(n);
+}
+
+function scoreBar(v, color) {
+  const pct = Math.round(v * 100);
+  return `<span class="score-bar" style="width:${pct}px;background:${color}"></span> ${pct}%`;
+}
+
+// ── sparkline (canvas) ───────────────────────────────────────────────────────
+const sparkCanvas = document.getElementById('spark');
+const sparkCtx    = sparkCanvas.getContext('2d');
+const SPARK_LEN   = 60;
+const sparkData   = new Array(SPARK_LEN).fill(0);
+let   lastRecv    = 0;
+
+function drawSparkline() {
+  const W = sparkCanvas.offsetWidth * devicePixelRatio;
+  const H = 60 * devicePixelRatio;
+  sparkCanvas.width  = W;
+  sparkCanvas.height = H;
+
+  const max = Math.max(...sparkData, 1);
+  const step = W / (SPARK_LEN - 1);
+
+  sparkCtx.clearRect(0, 0, W, H);
+  sparkCtx.beginPath();
+  sparkCtx.strokeStyle = '#6366f1';
+  sparkCtx.lineWidth   = 2 * devicePixelRatio;
+  sparkCtx.lineJoin    = 'round';
+
+  sparkData.forEach((v, i) => {
+    const x = i * step;
+    const y = H - (v / max) * (H * 0.9) - H * 0.05;
+    if (i === 0) sparkCtx.moveTo(x, y);
+    else         sparkCtx.lineTo(x, y);
+  });
+  sparkCtx.stroke();
+
+  // fill under
+  sparkCtx.lineTo(W, H); sparkCtx.lineTo(0, H); sparkCtx.closePath();
+  sparkCtx.fillStyle = 'rgba(99,102,241,.15)';
+  sparkCtx.fill();
+}
+
+// ── priority bar chart ───────────────────────────────────────────────────────
+const PRIORITIES = ['CRITICAL','HIGH','MEDIUM','LOW','BACKGROUND'];
+let   maxEnqueue  = 1;
+
+function buildBars() {
+  const container = document.getElementById('prio-bars');
+  container.innerHTML = PRIORITIES.map(p => `
+    <div class="bar-row">
+      <div class="bar-label">${p}</div>
+      <div class="bar-track">
+        <div class="bar-fill bar-${p}" id="bar-${p}" style="width:0%"></div>
+      </div>
+      <div class="bar-count" id="cnt-${p}">0</div>
+    </div>
+  `).join('');
+}
+buildBars();
+
+function updateBars(enqueue) {
+  const vals = PRIORITIES.map(p => enqueue[p] || 0);
+  maxEnqueue = Math.max(maxEnqueue, ...vals, 1);
+  PRIORITIES.forEach((p, i) => {
+    const pct = Math.round((vals[i] / maxEnqueue) * 100);
+    document.getElementById(`bar-${p}`).style.width = pct + '%';
+    document.getElementById(`cnt-${p}`).textContent = fmt(vals[i]);
+  });
+}
+
+// ── flows table ───────────────────────────────────────────────────────────────
+let flowFetchTimeout = null;
+
+async function updateFlows() {
+  try {
+    const resp  = await fetch('/flows');
+    const data  = await resp.json();
+    document.getElementById('flow-count').textContent = data.flow_count;
+
+    const tbody = document.getElementById('flows-body');
+    const top   = data.flows.slice(0, 20); // show top 20
+    tbody.innerHTML = top.map(f => `
+      <tr>
+        <td>${f.src_ip}:${f.src_port} → ${f.dst_ip}:${f.dst_port}</td>
+        <td>${f.protocol.toUpperCase()}</td>
+        <td>${fmt(f.packet_count)}</td>
+        <td>${fmt(f.byte_count)}B</td>
+        <td>${scoreBar(f.latency_score, '#ef4444')}</td>
+        <td>${scoreBar(f.bandwidth_score, '#6366f1')}</td>
+        <td>${scoreBar(f.burst_score, '#f97316')}</td>
+      </tr>
+    `).join('');
+  } catch (_) {}
+}
+
+// ── WebSocket connection ──────────────────────────────────────────────────────
+const dot  = document.getElementById('status-dot');
+const stxt = document.getElementById('status-text');
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws    = new WebSocket(`${proto}://${location.host}/ws`);
+
+  ws.onopen = () => {
+    dot.classList.add('connected');
+    stxt.textContent = 'Live';
+  };
+
+  ws.onclose = () => {
+    dot.classList.remove('connected');
+    stxt.textContent = 'Reconnecting…';
+    setTimeout(connect, 2000);
+  };
+
+  ws.onerror = () => ws.close();
+
+  ws.onmessage = ({ data }) => {
+    const d = JSON.parse(data);
+
+    document.getElementById('kpi-recv').textContent    = fmt(d.packets_received);
+    document.getElementById('kpi-drop').textContent    = fmt(d.packets_dropped);
+    document.getElementById('kpi-droprate').textContent = d.drop_rate + '%';
+    document.getElementById('kpi-saved').textContent   = fmt(d.bytes_saved) + 'B';
+    document.getElementById('kpi-flows').textContent   = d.active_flows;
+    document.getElementById('kpi-queue').textContent   = d.queue_size;
+
+    // queue fill
+    const fill = d.queue_fill_pct;
+    document.getElementById('queue-fill-bar').style.width  = fill + '%';
+    document.getElementById('queue-fill-label').textContent = fill + '%';
+
+    // sparkline
+    const delta = Math.max(0, d.packets_received - lastRecv);
+    lastRecv    = d.packets_received;
+    sparkData.push(delta);
+    if (sparkData.length > SPARK_LEN) sparkData.shift();
+    drawSparkline();
+
+    // priority bars
+    if (d.enqueue_counts) updateBars(d.enqueue_counts);
+
+    // flows (debounced, every ~3s)
+    if (!flowFetchTimeout) {
+      flowFetchTimeout = setTimeout(() => {
+        updateFlows();
+        flowFetchTimeout = null;
+      }, 3000);
+    }
+  };
+}
+
+connect();
+updateFlows();
+window.addEventListener('resize', drawSparkline);
+</script>
+</body>
+</html>

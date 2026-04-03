@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  # ── Single-node optimizer with telemetry dashboard ──────────────────────────
+  optimizer:
+    build: .
+    image: smart-bandwidth-optimizer:latest
+    container_name: bwopt
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Override via environment or .env file
+      - BW_MODE=local_server
+      - BW_LIMIT=10485760      # 10 MB/s
+    command:
+      - python
+      - main.py
+      - serve
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --coordinator        # enable multi-node coordinator
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Example edge node agent (reports to coordinator above) ─────────────────
+  # Uncomment and adjust to run a second node:
+  #
+  # edge-01:
+  #   build: .
+  #   image: smart-bandwidth-optimizer:latest
+  #   restart: unless-stopped
+  #   depends_on:
+  #     optimizer:
+  #       condition: service_healthy
+  #   command:
+  #     - python
+  #     - -c
+  #     - |
+  #       from bandwidth_optimizer import BandwidthOptimizer, OptimizerConfig
+  #       from bandwidth_optimizer.agent import NodeAgent, AgentConfig
+  #       import time
+  #       opt = BandwidthOptimizer()
+  #       cfg = AgentConfig(node_id="edge-01",
+  #                          coordinator_url="http://optimizer:8000",
+  #                          heartbeat_interval=5.0)
+  #       with NodeAgent(opt, cfg):
+  #           while True:
+  #               time.sleep(1)

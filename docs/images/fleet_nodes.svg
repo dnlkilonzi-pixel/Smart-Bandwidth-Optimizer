@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="320" viewBox="0 0 840 320">
+<rect width="840" height="320" fill="#f8fafc" rx="10"/>
+<text x="420" y="26" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" fill="#0f172a" text-anchor="middle" font-weight="700">Fleet Value Dashboard — GET /agents/value</text>
+<rect x="18" y="43" width="195" height="234" rx="9" fill="#e2e8f0"/>
+<rect x="15" y="40" width="195" height="234" rx="9" fill="white" stroke="#10b981" stroke-width="2"/>
+<rect x="15" y="40" width="195" height="36" rx="9" fill="#10b981"/>
+<rect x="15" y="58" width="195" height="18" fill="#10b981"/>
+<text x="112" y="63" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="700">edge-us-east</text>
+<rect x="154" y="44" width="50" height="16" rx="8" fill="#14532d"/>
+<text x="179" y="55" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="700">BEST</text>
+<text x="112" y="113" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="28" fill="#10b981" text-anchor="middle" font-weight="800">98.2%</text>
+<text x="112" y="130" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#64748b" text-anchor="middle" font-weight="400">efficiency</text>
+<rect x="29" y="138" width="167" height="10" rx="5" fill="#e2e8f0"/>
+<rect x="29" y="138" width="163" height="10" rx="5" fill="#10b981"/>
+<text x="29" y="166" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#16a34a" text-anchor="start" font-weight="400">✓ 4,820 value/sec delivered</text>
+<text x="29" y="182" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#ef4444" text-anchor="start" font-weight="400">✗ 87 value/sec lost</text>
+<rect x="86" y="254" width="52" height="14" rx="7" fill="#10b981" opacity="0.15" stroke="#10b981" stroke-width="1"/>
+<text x="112" y="264" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="#10b981" text-anchor="middle" font-weight="600">● PVM active</text>
+<rect x="223" y="43" width="195" height="234" rx="9" fill="#e2e8f0"/>
+<rect x="220" y="40" width="195" height="234" rx="9" fill="white" stroke="#ef4444" stroke-width="2"/>
+<rect x="220" y="40" width="195" height="36" rx="9" fill="#ef4444"/>
+<rect x="220" y="58" width="195" height="18" fill="#ef4444"/>
+<text x="317" y="63" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="700">edge-eu-west</text>
+<rect x="359" y="44" width="50" height="16" rx="8" fill="#7f1d1d"/>
+<text x="384" y="55" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="700">WORST</text>
+<text x="317" y="113" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="28" fill="#ef4444" text-anchor="middle" font-weight="800">74.1%</text>
+<text x="317" y="130" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#64748b" text-anchor="middle" font-weight="400">efficiency</text>
+<rect x="234" y="138" width="167" height="10" rx="5" fill="#e2e8f0"/>
+<rect x="234" y="138" width="123" height="10" rx="5" fill="#ef4444"/>
+<text x="234" y="166" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#16a34a" text-anchor="start" font-weight="400">✓ 1,483 value/sec delivered</text>
+<text x="234" y="182" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#ef4444" text-anchor="start" font-weight="400">✗ 518 value/sec lost</text>
+<rect x="291" y="254" width="52" height="14" rx="7" fill="#ef4444" opacity="0.15" stroke="#ef4444" stroke-width="1"/>
+<text x="317" y="264" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="#ef4444" text-anchor="middle" font-weight="600">● PVM active</text>
+<rect x="428" y="43" width="195" height="234" rx="9" fill="#e2e8f0"/>
+<rect x="425" y="40" width="195" height="234" rx="9" fill="white" stroke="#f59e0b" stroke-width="2"/>
+<rect x="425" y="40" width="195" height="36" rx="9" fill="#f59e0b"/>
+<rect x="425" y="58" width="195" height="18" fill="#f59e0b"/>
+<text x="522" y="63" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="700">edge-ap-south</text>
+<text x="522" y="113" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="28" fill="#f59e0b" text-anchor="middle" font-weight="800">91.5%</text>
+<text x="522" y="130" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#64748b" text-anchor="middle" font-weight="400">efficiency</text>
+<rect x="439" y="138" width="167" height="10" rx="5" fill="#e2e8f0"/>
+<rect x="439" y="138" width="152" height="10" rx="5" fill="#f59e0b"/>
+<text x="439" y="166" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#16a34a" text-anchor="start" font-weight="400">✓ 2,190 value/sec delivered</text>
+<text x="439" y="182" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#ef4444" text-anchor="start" font-weight="400">✗ 204 value/sec lost</text>
+<rect x="496" y="254" width="52" height="14" rx="7" fill="#f59e0b" opacity="0.15" stroke="#f59e0b" stroke-width="1"/>
+<text x="522" y="264" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="#f59e0b" text-anchor="middle" font-weight="600">● PVM active</text>
+<rect x="633" y="43" width="195" height="234" rx="9" fill="#e2e8f0"/>
+<rect x="630" y="40" width="195" height="234" rx="9" fill="white" stroke="#94a3b8" stroke-width="2"/>
+<rect x="630" y="40" width="195" height="36" rx="9" fill="#94a3b8"/>
+<rect x="630" y="58" width="195" height="18" fill="#94a3b8"/>
+<text x="727" y="63" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="700">legacy-dc-01</text>
+<text x="727" y="120" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle" font-weight="700">Legacy Node</text>
+<text x="727" y="140" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#cbd5e1" text-anchor="middle" font-weight="400">(No PVM)</text>
+<text x="727" y="180" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#94a3b8" text-anchor="middle" font-weight="400">→ upgrade to</text>
+<text x="727" y="195" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#94a3b8" text-anchor="middle" font-weight="400">enable PVM</text>
+<rect x="15" y="286" width="810" height="26" rx="6" fill="#1e293b"/>
+<text x="28" y="303" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="white" text-anchor="start" font-weight="400">FLEET  ▸  91.3% efficiency  ·  8,493 value/sec delivered  ·  809 value/sec lost  ·  best: edge-us-east  ·  worst: edge-eu-west</text>
+</svg>

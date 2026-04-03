@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="495" viewBox="0 0 900 495">
+<rect width="900" height="495" fill="#f8fafc" rx="10"/>
+<text x="450" y="28" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" fill="#0f172a" text-anchor="middle" font-weight="700">VoIP vs. Bulk Update — Queue Behaviour Under Congestion</text>
+<line x1="450" y1="44" x2="450" y2="473" stroke="#cbd5e1" stroke-width="1.5"/>
+<rect x="10" y="44" width="430" height="34" rx="6" fill="#fee2e2"/>
+<text x="225" y="66" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#ef4444" text-anchor="middle" font-weight="700">✗  Without PVM</text>
+<rect x="460" y="44" width="430" height="34" rx="6" fill="#dcfce7"/>
+<text x="675" y="66" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#16a34a" text-anchor="middle" font-weight="700">✓  With PVM  (ValueScheduler)</text>
+<rect x="75" y="90" width="300" height="40" rx="5" fill="#94a3b8"/>
+<text x="87" y="105" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">bulk[0]  port 6881</text>
+<text x="87" y="120" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=0.5</text>
+<text x="367" y="120" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="end" font-weight="400" opacity="0.90">queue[1]</text>
+<rect x="75" y="135" width="300" height="40" rx="5" fill="#94a3b8"/>
+<text x="87" y="150" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">bulk[1]  port 6881</text>
+<text x="87" y="165" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=0.5</text>
+<text x="367" y="165" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="end" font-weight="400" opacity="0.90">queue[2]</text>
+<rect x="75" y="180" width="300" height="40" rx="5" fill="#94a3b8"/>
+<text x="87" y="195" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">bulk[2]  port 6881</text>
+<text x="87" y="210" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=0.5</text>
+<text x="367" y="210" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="end" font-weight="400" opacity="0.90">queue[3]</text>
+<rect x="75" y="225" width="300" height="40" rx="5" fill="#94a3b8"/>
+<text x="87" y="240" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">bulk[3]  port 6881</text>
+<text x="87" y="255" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=0.5</text>
+<text x="367" y="255" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="end" font-weight="400" opacity="0.90">queue[4]</text>
+<rect x="75" y="270" width="300" height="40" rx="5" fill="#94a3b8"/>
+<text x="87" y="285" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">bulk[4]  port 6881</text>
+<text x="87" y="300" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=0.5</text>
+<text x="367" y="300" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="end" font-weight="400" opacity="0.90">queue[5]</text>
+<rect x="75" y="321" width="300" height="40" rx="5" fill="#7c3aed" stroke="#c4b5fd" stroke-width="2" stroke-dasharray="6,3"/>
+<text x="87" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">voip  RTP port 5004</text>
+<text x="87" y="351" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400">coeff=100.0  ← queue FULL, must wait</text>
+<text x="225" y="315" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#ef4444" text-anchor="middle" font-weight="600">▼  Queue FULL (5/5) — VoIP rejected</text>
+<rect x="525" y="90" width="300" height="40" rx="5" fill="#7c3aed"/>
+<text x="537" y="105" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">voip  RTP port 5004</text>
+<text x="537" y="120" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=100.0</text>
+<text x="817" y="120" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="end" font-weight="400" opacity="0.90">← FIRST! 🔝</text>
+<rect x="525" y="135" width="300" height="40" rx="5" fill="#94a3b8"/>
+<text x="537" y="150" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">bulk[1]  port 6881</text>
+<text x="537" y="165" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=0.5</text>
+<rect x="525" y="180" width="300" height="40" rx="5" fill="#94a3b8"/>
+<text x="537" y="195" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">bulk[2]  port 6881</text>
+<text x="537" y="210" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=0.5</text>
+<rect x="525" y="225" width="300" height="40" rx="5" fill="#94a3b8"/>
+<text x="537" y="240" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">bulk[3]  port 6881</text>
+<text x="537" y="255" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=0.5</text>
+<rect x="525" y="270" width="300" height="40" rx="5" fill="#94a3b8"/>
+<text x="537" y="285" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="white" text-anchor="start" font-weight="600">bulk[4]  port 6881</text>
+<text x="537" y="300" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="start" font-weight="400" opacity="0.85">coeff=0.5</text>
+<rect x="525" y="321" width="300" height="40" rx="5" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+<text x="537" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#94a3b8" text-anchor="start" font-weight="600">bulk[0]  port 6881</text>
+<text x="537" y="351" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#94a3b8" text-anchor="start" font-weight="400">coeff=0.5  → EVICTED (lowest value in queue)</text>
+<line x1="529" y1="325" x2="821" y2="357" stroke="#ef4444" stroke-width="1.5" opacity="0.5"/>
+<line x1="529" y1="357" x2="821" y2="325" stroke="#ef4444" stroke-width="1.5" opacity="0.5"/>
+<text x="225" y="451" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#ef4444" text-anchor="middle" font-weight="700">VoIP glitches. SLA breached.</text>
+<text x="225" y="469" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#64748b" text-anchor="middle" font-weight="400">Forwarding order: bulk bulk bulk bulk bulk voip</text>
+<text x="675" y="451" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#16a34a" text-anchor="middle" font-weight="700">VoIP protected. Zero value lost.</text>
+<text x="675" y="469" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#64748b" text-anchor="middle" font-weight="400">Forwarding order: VoIP  bulk bulk bulk bulk</text>
+</svg>
