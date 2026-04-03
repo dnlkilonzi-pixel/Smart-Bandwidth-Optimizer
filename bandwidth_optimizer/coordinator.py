@@ -18,13 +18,28 @@ Authenticated mode::
 
     coord = AgentCoordinator(require_auth=True, auth_secret="my-shared-secret")
     # The API endpoint will call coord.ingest_authenticated(node_id, body, sig)
+
+Multi-node value coordination
+------------------------------
+When PVM is active, each node includes a ``value`` sub-dict in its stats
+heartbeat.  The coordinator aggregates these into a fleet-wide value view::
+
+    coord.fleet_value_summary()
+    # → {
+    #     "fleet_value_efficiency_pct": 94.2,
+    #     "fleet_value_delivered_per_sec": 1234.5,
+    #     "fleet_value_lost_per_sec": 72.1,
+    #     "best_node": "node-02",
+    #     "worst_node": "node-05",
+    #     "nodes": { "node-01": {...}, ... },
+    # }
 """
 
 from __future__ import annotations
 
 import threading
 import time
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from .trust import verify_payload, SIGNATURE_HEADER
 
@@ -135,6 +150,95 @@ class AgentCoordinator:
         """Explicitly remove an agent from the registry."""
         with self._lock:
             self._registry.pop(node_id, None)
+
+    # ── multi-node value coordination ──────────────────────────────────────
+
+    def fleet_value_summary(self) -> dict:
+        """
+        Aggregate PVM value metrics across all live nodes.
+
+        Nodes that include a ``"value"`` sub-dict in their stats heartbeat
+        (i.e., nodes running in PVM mode) are included in the fleet-wide
+        value summary.  Non-PVM nodes are listed in ``"non_pvm_nodes"``.
+
+        Returns
+        -------
+        dict with keys:
+
+        * ``fleet_value_efficiency_pct``  — weighted average efficiency
+        * ``fleet_value_delivered_per_sec`` — sum of delivered value/s
+        * ``fleet_value_lost_per_sec``    — sum of lost value/s
+        * ``best_node``                   — node_id with highest efficiency
+        * ``worst_node``                  — node_id with lowest efficiency
+        * ``pvm_node_count``              — nodes reporting value metrics
+        * ``non_pvm_nodes``               — list of node IDs without PVM data
+        * ``nodes``                       — per-node value sub-dict
+
+        Usage::
+
+            summary = coord.fleet_value_summary()
+            if summary["fleet_value_efficiency_pct"] < 90.0:
+                alert("Fleet value efficiency below 90%!")
+        """
+        with self._lock:
+            self._evict_stale()
+            nodes_value: Dict[str, dict] = {}
+            non_pvm: List[str] = []
+            for node_id, entry in self._registry.items():
+                v = entry["stats"].get("value")
+                if v:
+                    nodes_value[node_id] = v
+                else:
+                    non_pvm.append(node_id)
+
+        if not nodes_value:
+            return {
+                "fleet_value_efficiency_pct": None,
+                "fleet_value_delivered_per_sec": 0.0,
+                "fleet_value_lost_per_sec": 0.0,
+                "best_node": None,
+                "worst_node": None,
+                "pvm_node_count": 0,
+                "non_pvm_nodes": non_pvm,
+                "nodes": {},
+                "note": "No PVM-enabled nodes found.  Enable PVM mode on at least one node.",
+            }
+
+        total_delivered = sum(
+            v.get("value_delivered_per_sec", 0.0) for v in nodes_value.values()
+        )
+        total_lost = sum(
+            v.get("value_lost_per_sec", 0.0) for v in nodes_value.values()
+        )
+        total_flow = total_delivered + total_lost
+        fleet_efficiency = (
+            100.0 * total_delivered / total_flow if total_flow > 0 else 100.0
+        )
+
+        efficiencies = {
+            nid: v.get("value_efficiency_pct", 100.0)
+            for nid, v in nodes_value.items()
+        }
+        best_node = max(efficiencies, key=efficiencies.__getitem__)
+        worst_node = min(efficiencies, key=efficiencies.__getitem__)
+
+        return {
+            "fleet_value_efficiency_pct": round(fleet_efficiency, 2),
+            "fleet_value_delivered_per_sec": round(total_delivered, 4),
+            "fleet_value_lost_per_sec": round(total_lost, 4),
+            "best_node": best_node,
+            "worst_node": worst_node,
+            "pvm_node_count": len(nodes_value),
+            "non_pvm_nodes": non_pvm,
+            "nodes": {
+                nid: {
+                    "value_efficiency_pct": round(v.get("value_efficiency_pct", 100.0), 2),
+                    "value_delivered_per_sec": round(v.get("value_delivered_per_sec", 0.0), 4),
+                    "value_lost_per_sec": round(v.get("value_lost_per_sec", 0.0), 4),
+                }
+                for nid, v in nodes_value.items()
+            },
+        }
 
     # ── internal ──────────────────────────────────────────────────────────
 

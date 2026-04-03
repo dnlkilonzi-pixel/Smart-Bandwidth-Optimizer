@@ -342,6 +342,30 @@ def create_app(
             raise HTTPException(status_code=404, detail="Coordinator not configured")
         return _coordinator.all_agents()
 
+    @app.get(
+        "/agents/value",
+        summary="Fleet-wide PVM value coordination summary",
+        include_in_schema=_coordinator is not None,
+    )
+    async def get_agents_value() -> dict:
+        """
+        Return aggregated PVM value metrics across all live nodes.
+
+        Requires a coordinator to be configured (``--coordinator`` flag) and
+        at least one node running in PVM mode (i.e., reporting a ``value``
+        sub-dict in its heartbeat stats).
+
+        Key fields:
+        - ``fleet_value_efficiency_pct`` — weighted average across all PVM nodes
+        - ``fleet_value_lost_per_sec``   — total value being lost fleet-wide
+        - ``best_node`` / ``worst_node`` — nodes to investigate or rebalance
+        - ``nodes``                      — per-node efficiency breakdown
+        """
+        if _coordinator is None:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Coordinator not configured")
+        return _coordinator.fleet_value_summary()
+
     # ── WebSocket streaming ───────────────────────────────────────────────
 
     @app.websocket("/ws")

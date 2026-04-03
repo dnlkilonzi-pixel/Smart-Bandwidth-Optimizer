@@ -35,9 +35,12 @@ from .stress import StressConfig, StressPattern, StressResult, StressTester
 from .trust import SIGNATURE_HEADER, sign_payload, verify_payload
 from .value import (
     FlowValuePolicy,
+    ValueCoefficientsGuide,
+    ValueCoefficientTuner,
     ValueLossTracker,
     ValueScheduler,
     ValueSLAContract,
+    TRAFFIC_PRESETS,
 )
 from .license import LicenseError, LicenseKey, parse_license_key
 
@@ -109,6 +112,9 @@ __all__ = [
     "ValueScheduler",
     "ValueSLAContract",
     "ValueLossTracker",
+    "ValueCoefficientsGuide",
+    "ValueCoefficientTuner",
+    "TRAFFIC_PRESETS",
     # license
     "LicenseKey",
     "LicenseError",
