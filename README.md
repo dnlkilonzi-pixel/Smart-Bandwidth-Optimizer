@@ -37,22 +37,9 @@ No kernel modules.  Production-grade (448 tests, multi-threaded, async API).
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    A[Incoming Packet] --> B[FlowTracker\n5-tuple • latency • burst score]
-    B --> C[TrafficClassifier\nYAML policy rules]
-    C --> D[FlowValuePolicy\nvalue_coefficient assignment]
-    D --> E{PacketFilter\ntoken-bucket + RED}
-    E -->|dropped| F[ValueLossTracker\nrecord lost value]
-    E -->|accepted| G[PayloadCompressor\nzlib • skip if tiny/binary]
-    G --> H[ValueScheduler\nsort by effective_value]
-    H --> I[FastAPI Telemetry\nREST + WebSocket]
-    I --> J[Live Dashboard\nvalue_efficiency_pct]
-
-    style D fill:#2563eb,color:#fff
-    style H fill:#2563eb,color:#fff
-    style F fill:#dc2626,color:#fff
-```
+<p align="center">
+  <img src="docs/images/pipeline.svg" alt="BandwidthOS Processing Pipeline" width="920"/>
+</p>
 
 ### Pipeline stages
 
@@ -79,6 +66,10 @@ bulk traffic.  Audio glitches.  SLA breached.
 
 **With BandwidthOS PVM**: VoIP (coeff=100) evicts the lowest-value bulk packet
 (coeff=0.5) and is forwarded *first*, in under one scheduler cycle.
+
+<p align="center">
+  <img src="docs/images/killer_demo.svg" alt="Killer Demo — VoIP vs Bulk" width="900"/>
+</p>
 
 ```
 $ python demos/01_killer_demo.py
@@ -205,6 +196,10 @@ python main.py --license-key <KEY> --policy my_policy.yaml serve
 
 `ValueCoefficientsGuide` answers that with research-backed defaults:
 
+<p align="center">
+  <img src="docs/images/value_chart.svg" alt="Value Coefficient Presets" width="740"/>
+</p>
+
 ```
 $ python demos/02_value_calibration.py
 ```
@@ -213,17 +208,6 @@ $ python demos/02_value_calibration.py
 ────────────────────────────────────────────────────────────────────
   VALUE CALIBRATION — Industry-Standard Presets
 ────────────────────────────────────────────────────────────────────
-
-  Built-in presets (ValueCoefficientsGuide):
-
-  Name                   Coeff  Priority    Rationale (abbreviated)
-  -------------------- -------  ----------  -----------------------------------
-  voip                   100.0  CRITICAL    Each dropped RTP packet causes an audible glitch...
-  interactive_api         50.0  HIGH        Sub-100 ms latency is a hard requirement for checkout...
-  video_conference        40.0  HIGH        Video can absorb ~200 ms jitter via playout buffer...
-  interactive_web         20.0  HIGH        100 ms of extra latency has measurable revenue impact...
-  email                    5.0  MEDIUM      A few seconds of extra latency is imperceptible...
-  bulk_transfer            0.5  BACKGROUND  Should use only leftover capacity. Coefficient < 1...
 
   Per-packet coefficient lookup:
 
@@ -268,6 +252,10 @@ vp = FlowValuePolicy.from_presets(overrides={"voip": 200.0, "bulk_transfer": 0.1
 > change.  An SLA breach means your coefficient isn't high enough *right now*.
 
 `ValueCoefficientTuner` closes the loop automatically using pure heuristics:
+
+<p align="center">
+  <img src="docs/images/feedback_loop.svg" alt="Auto-Tuning Feedback Loop" width="740"/>
+</p>
 
 ```
 $ python demos/03_feedback_loop.py
@@ -341,6 +329,10 @@ print(tuner.tuning_report())
 > Which node is haemorrhaging value?  Where should you route high-value flows?
 
 `AgentCoordinator.fleet_value_summary()` aggregates PVM metrics from all nodes:
+
+<p align="center">
+  <img src="docs/images/fleet_nodes.svg" alt="Fleet Value Dashboard" width="840"/>
+</p>
 
 ```
 $ python demos/04_fleet_coordination.py
@@ -583,11 +575,11 @@ sla = ValueSLAContract("voip_tenant", min_value_rate_per_sec=1000.0)
 # 4. Feedback loop to auto-adjust coefficients
 tuner = ValueCoefficientTuner(policy)
 
-# ── processing loop ──
+# -- processing loop --
 for packet in incoming_packets():
     optimizer.process(packet)
 
-# ── monitoring loop (every 5 s) ──
+# -- monitoring loop (every 5 s) --
 tuner.observe_contract(
     "voip",
     delivered_rate=optimizer.value_tracker.value_delivered_per_sec,

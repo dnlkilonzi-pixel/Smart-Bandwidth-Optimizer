@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="675" viewBox="0 0 920 675">
+<rect width="920" height="675" fill="#f8fafc" rx="10"/>
+<text x="460" y="28" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="17" fill="#0f172a" text-anchor="middle" font-weight="700">BandwidthOS — Processing Pipeline</text>
+<rect x="360" y="44" width="200" height="38" rx="19" fill="#0f172a"/>
+<text x="460" y="68" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="white" text-anchor="middle" font-weight="600">Incoming Packet</text>
+<line x1="460" y1="82" x2="460" y2="100" stroke="#94a3b8" stroke-width="2"/><polygon points="455,100 465,100 460,108" fill="#94a3b8"/>
+<rect x="180" y="108" width="560" height="58" rx="7" fill="#0ea5e9"/>
+<circle cx="206" cy="137" r="17" fill="rgba(0,0,0,0.22)"/>
+<text x="206" y="142" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="white" text-anchor="middle" font-weight="800">0</text>
+<text x="234" y="130" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="white" text-anchor="start" font-weight="700">FlowTracker</text>
+<text x="234" y="150" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="white" text-anchor="start" font-weight="400" opacity="0.85">5-tuple · latency · bandwidth · burst scores</text>
+<line x1="460" y1="166" x2="460" y2="184" stroke="#94a3b8" stroke-width="2"/><polygon points="455,184 465,184 460,192" fill="#94a3b8"/>
+<rect x="180" y="192" width="560" height="58" rx="7" fill="#f59e0b"/>
+<circle cx="206" cy="221" r="17" fill="rgba(0,0,0,0.22)"/>
+<text x="206" y="226" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="white" text-anchor="middle" font-weight="800">1</text>
+<text x="234" y="214" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="white" text-anchor="start" font-weight="700">TrafficClassifier + PolicyLoader</text>
+<text x="234" y="234" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="white" text-anchor="start" font-weight="400" opacity="0.85">YAML rules → CRITICAL / HIGH / MEDIUM / LOW / BACKGROUND</text>
+<line x1="460" y1="250" x2="460" y2="268" stroke="#94a3b8" stroke-width="2"/><polygon points="455,268 465,268 460,276" fill="#94a3b8"/>
+<rect x="180" y="276" width="560" height="58" rx="7" fill="#7c3aed"/>
+<circle cx="206" cy="305" r="17" fill="rgba(0,0,0,0.22)"/>
+<text x="206" y="310" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="white" text-anchor="middle" font-weight="800">1b</text>
+<text x="234" y="298" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="white" text-anchor="start" font-weight="700">FlowValuePolicy</text>
+<text x="234" y="318" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="white" text-anchor="start" font-weight="400" opacity="0.85">value_coefficient assignment from presets or YAML rules</text>
+<line x1="460" y1="334" x2="460" y2="352" stroke="#94a3b8" stroke-width="2"/><polygon points="455,352 465,352 460,360" fill="#94a3b8"/>
+<rect x="180" y="360" width="560" height="58" rx="7" fill="#ef4444"/>
+<circle cx="206" cy="389" r="17" fill="rgba(0,0,0,0.22)"/>
+<text x="206" y="394" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="white" text-anchor="middle" font-weight="800">2</text>
+<text x="234" y="382" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="white" text-anchor="start" font-weight="700">PacketFilter</text>
+<text x="234" y="402" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="white" text-anchor="start" font-weight="400" opacity="0.85">token-bucket rate limiting + RED · evict lowest-value on overflow</text>
+<line x1="460" y1="418" x2="460" y2="436" stroke="#94a3b8" stroke-width="2"/><polygon points="455,436 465,436 460,444" fill="#94a3b8"/>
+<rect x="180" y="444" width="560" height="58" rx="7" fill="#10b981"/>
+<circle cx="206" cy="473" r="17" fill="rgba(0,0,0,0.22)"/>
+<text x="206" y="478" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="white" text-anchor="middle" font-weight="800">3</text>
+<text x="234" y="466" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="white" text-anchor="start" font-weight="700">PayloadCompressor</text>
+<text x="234" y="486" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="white" text-anchor="start" font-weight="400" opacity="0.85">zlib compress if payload ≥ threshold and compressible</text>
+<line x1="460" y1="502" x2="460" y2="520" stroke="#94a3b8" stroke-width="2"/><polygon points="455,520 465,520 460,528" fill="#94a3b8"/>
+<rect x="180" y="528" width="560" height="58" rx="7" fill="#7c3aed"/>
+<circle cx="206" cy="557" r="17" fill="rgba(0,0,0,0.22)"/>
+<text x="206" y="562" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="white" text-anchor="middle" font-weight="800">4</text>
+<text x="234" y="550" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="white" text-anchor="start" font-weight="700">ValueScheduler</text>
+<text x="234" y="570" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="white" text-anchor="start" font-weight="400" opacity="0.85">priority heap sorted by value_coefficient × priority_multiplier</text>
+<line x1="460" y1="586" x2="460" y2="604" stroke="#94a3b8" stroke-width="2"/><polygon points="455,604 465,604 460,612" fill="#94a3b8"/>
+<rect x="340" y="612" width="240" height="38" rx="19" fill="#0f172a"/>
+<text x="460" y="636" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="white" text-anchor="middle" font-weight="600">Forwarded Packet</text>
+<line x1="740" y1="389" x2="759" y2="389" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5,3"/><polygon points="759,385 759,393 766,389" fill="#ef4444"/>
+<rect x="766" y="363" width="148" height="52" rx="7" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+<text x="840" y="383" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#ef4444" text-anchor="middle" font-weight="700">DROP</text>
+<text x="840" y="400" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#ef4444" text-anchor="middle" font-weight="400">ValueLossTracker</text>
+<line x1="740" y1="557" x2="759" y2="557" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5,3"/><polygon points="759,553 759,561 766,557" fill="#7c3aed"/>
+<rect x="766" y="531" width="148" height="52" rx="7" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="840" y="551" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#7c3aed" text-anchor="middle" font-weight="700">FastAPI</text>
+<text x="840" y="568" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#7c3aed" text-anchor="middle" font-weight="400">REST · WebSocket</text>
+</svg>

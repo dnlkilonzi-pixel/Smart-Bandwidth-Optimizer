@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="390" viewBox="0 0 740 390">
+<rect width="740" height="390" fill="#f8fafc" rx="10"/>
+<text x="370" y="25" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" fill="#0f172a" text-anchor="middle" font-weight="700">Auto-Tuning Feedback Loop — Coefficient Convergence</text>
+<rect x="72" y="50" width="109" height="270" fill="#fee2e2" opacity="0.7"/>
+<rect x="487" y="50" width="44" height="270" fill="#fee2e2" opacity="0.7"/>
+<text x="126" y="63" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="#ef4444" text-anchor="middle" font-weight="600">SLA breach</text>
+<text x="509" y="63" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="#ef4444" text-anchor="middle" font-weight="600">breach</text>
+<rect x="72" y="50" width="613" height="270" fill="none" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="72" y1="297" x2="685" y2="297" stroke="#e2e8f0" stroke-width="1"/>
+<text x="67" y="301" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="end" font-weight="400">100</text>
+<line x1="72" y1="237" x2="685" y2="237" stroke="#e2e8f0" stroke-width="1"/>
+<text x="67" y="241" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="end" font-weight="400">120</text>
+<line x1="72" y1="178" x2="685" y2="178" stroke="#e2e8f0" stroke-width="1"/>
+<text x="67" y="182" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="end" font-weight="400">140</text>
+<line x1="72" y1="119" x2="685" y2="119" stroke="#e2e8f0" stroke-width="1"/>
+<text x="67" y="123" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="end" font-weight="400">160</text>
+<line x1="72" y1="59" x2="685" y2="59" stroke="#e2e8f0" stroke-width="1"/>
+<text x="67" y="63" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="end" font-weight="400">180</text>
+<line x1="72" y1="320" x2="72" y2="324" stroke="#94a3b8" stroke-width="1"/>
+<text x="72" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="400">1</text>
+<line x1="159" y1="320" x2="159" y2="324" stroke="#94a3b8" stroke-width="1"/>
+<text x="159" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="400">3</text>
+<line x1="247" y1="320" x2="247" y2="324" stroke="#94a3b8" stroke-width="1"/>
+<text x="247" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="400">5</text>
+<line x1="334" y1="320" x2="334" y2="324" stroke="#94a3b8" stroke-width="1"/>
+<text x="334" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="400">7</text>
+<line x1="422" y1="320" x2="422" y2="324" stroke="#94a3b8" stroke-width="1"/>
+<text x="422" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="400">9</text>
+<line x1="509" y1="320" x2="509" y2="324" stroke="#94a3b8" stroke-width="1"/>
+<text x="509" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="400">11</text>
+<line x1="597" y1="320" x2="597" y2="324" stroke="#94a3b8" stroke-width="1"/>
+<text x="597" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="400">13</text>
+<line x1="685" y1="320" x2="685" y2="324" stroke="#94a3b8" stroke-width="1"/>
+<text x="685" y="336" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="400">15</text>
+<text x="20" y="189" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" transform="rotate(-90 20 189)">Coefficient</text>
+<text x="378" y="376" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="400">Observation (5-second monitoring interval)</text>
+<line x1="72" y1="297" x2="685" y2="297" stroke="#94a3b8" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="689" y="301" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="400">base=100</text>
+<line x1="72" y1="237" x2="115" y2="166" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="115" y1="166" x2="159" y2="81" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="159" y1="81" x2="203" y2="81" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="203" y1="81" x2="247" y2="81" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="247" y1="81" x2="290" y2="106" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="290" y1="106" x2="334" y2="131" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="334" y1="131" x2="378" y2="154" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="378" y1="154" x2="422" y2="176" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="422" y1="176" x2="466" y2="176" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="466" y1="176" x2="509" y2="92" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="509" y1="92" x2="553" y2="117" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="553" y1="117" x2="597" y2="141" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="597" y1="141" x2="641" y2="164" stroke="#7c3aed" stroke-width="2.5"/>
+<line x1="641" y1="164" x2="685" y2="185" stroke="#7c3aed" stroke-width="2.5"/>
+<circle cx="72" cy="237" r="5" fill="#ef4444" stroke="white" stroke-width="1.5"/>
+<circle cx="115" cy="166" r="5" fill="#ef4444" stroke="white" stroke-width="1.5"/>
+<circle cx="159" cy="81" r="5" fill="#ef4444" stroke="white" stroke-width="1.5"/>
+<circle cx="203" cy="81" r="5" fill="#7c3aed" stroke="white" stroke-width="1.5"/>
+<circle cx="247" cy="81" r="5" fill="#7c3aed" stroke="white" stroke-width="1.5"/>
+<circle cx="290" cy="106" r="5" fill="#7c3aed" stroke="white" stroke-width="1.5"/>
+<circle cx="334" cy="131" r="5" fill="#10b981" stroke="white" stroke-width="1.5"/>
+<circle cx="378" cy="154" r="5" fill="#10b981" stroke="white" stroke-width="1.5"/>
+<circle cx="422" cy="176" r="5" fill="#10b981" stroke="white" stroke-width="1.5"/>
+<circle cx="466" cy="176" r="5" fill="#7c3aed" stroke="white" stroke-width="1.5"/>
+<circle cx="509" cy="92" r="5" fill="#ef4444" stroke="white" stroke-width="1.5"/>
+<circle cx="553" cy="117" r="5" fill="#7c3aed" stroke="white" stroke-width="1.5"/>
+<circle cx="597" cy="141" r="5" fill="#10b981" stroke="white" stroke-width="1.5"/>
+<circle cx="641" cy="164" r="5" fill="#10b981" stroke="white" stroke-width="1.5"/>
+<circle cx="685" cy="185" r="5" fill="#10b981" stroke="white" stroke-width="1.5"/>
+<text x="77" y="228" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="#ef4444" text-anchor="start" font-weight="700">boost ×1.2</text>
+<text x="163" y="72" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="#7c3aed" text-anchor="start" font-weight="400">peak=172.8</text>
+<text x="338" y="122" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="9" fill="#10b981" text-anchor="start" font-weight="700">decay ×0.95</text>
+<circle cx="685" cy="185" r="7" fill="#7c3aed" stroke="white" stroke-width="2"/>
+<text x="689" y="189" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#7c3aed" text-anchor="start" font-weight="700">137.6</text>
+<circle cx="523" cy="72" r="5" fill="#ef4444"/>
+<text x="533" y="76" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#0f172a" text-anchor="start" font-weight="400">SLA violated → boost ×1.2</text>
+<circle cx="523" cy="90" r="5" fill="#7c3aed"/>
+<text x="533" y="94" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#0f172a" text-anchor="start" font-weight="400">Acceptable zone → no change</text>
+<circle cx="523" cy="108" r="5" fill="#10b981"/>
+<text x="533" y="112" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#0f172a" text-anchor="start" font-weight="400">Perfect delivery → decay ×0.95</text>
+</svg>
