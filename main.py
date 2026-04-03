@@ -23,7 +23,7 @@ import argparse
 import json
 import sys
 import time
-from typing import List
+from typing import List, Optional
 
 from bandwidth_optimizer import (
     BandwidthOptimizer,
@@ -33,6 +33,7 @@ from bandwidth_optimizer import (
     TrafficPriority,
 )
 from bandwidth_optimizer.classifier import TrafficClassifier
+from bandwidth_optimizer.license import LicenseError, LicenseKey, parse_license_key
 from bandwidth_optimizer.policy import PolicyLoadError, PolicyLoader
 from bandwidth_optimizer.safety import FailMode, SafetyGuard
 
@@ -43,20 +44,52 @@ def _build_optimizer(args: argparse.Namespace, **cfg_kwargs) -> BandwidthOptimiz
     """Build an optimizer, optionally loading a YAML policy file."""
     mode = DeploymentMode(args.mode)
     cfg = OptimizerConfig(mode=mode, total_bandwidth_bps=args.bw, **cfg_kwargs)
-    optimizer = BandwidthOptimizer(config=cfg)
 
+    # Resolve license and build FlowValuePolicy when PVM is licensed
+    license_key = _resolve_license(args)
+    flow_value_policy = None
     policy_path = getattr(args, "policy", None)
+
     if policy_path:
         try:
             policy = PolicyLoader.load_file(policy_path)
         except (OSError, PolicyLoadError) as exc:
             print(f"Error loading policy file: {exc}", file=sys.stderr)
             sys.exit(1)
+        # Load FlowValuePolicy from the same YAML when PVM feature is enabled
+        if license_key is not None and license_key.has_feature("pvm"):
+            from bandwidth_optimizer.value import FlowValuePolicy
+            flow_value_policy = FlowValuePolicy.from_policy(policy)
+            print(f"  PVM mode enabled (value-weighted scheduling active)")
+        optimizer = BandwidthOptimizer(config=cfg, flow_value_policy=flow_value_policy)
         optimizer.classifier._rules = policy.to_classification_rules()
         optimizer.classifier._default_priority = policy.default_priority
         print(f"  Loaded {len(policy.rules)} rules from {policy_path}")
+    else:
+        if license_key is not None and license_key.has_feature("pvm"):
+            # PVM active with default rules (value_coefficient=1.0 for all)
+            from bandwidth_optimizer.value import FlowValuePolicy
+            flow_value_policy = FlowValuePolicy()
+            print(f"  PVM mode enabled (value-weighted scheduling active)")
+        optimizer = BandwidthOptimizer(config=cfg, flow_value_policy=flow_value_policy)
 
     return optimizer
+
+
+def _resolve_license(args: argparse.Namespace) -> Optional[LicenseKey]:
+    """Parse and validate the license key if provided; return None for community."""
+    key_str = getattr(args, "license_key", None) or ""
+    if not key_str:
+        return None
+    try:
+        key = parse_license_key(key_str)
+        key.require_valid()
+        print(f"  License: tier={key.tier}, customer={key.customer!r}, "
+              f"features={key.features}")
+        return key
+    except LicenseError as exc:
+        print(f"License key error: {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _wrap_safety(optimizer: BandwidthOptimizer, args: argparse.Namespace):
@@ -272,6 +305,7 @@ def cmd_serve(args: argparse.Namespace) -> None:
     print(f"  SLA API:      http://{args.host}:{args.port}/sla")
     print(f"  Backpressure: http://{args.host}:{args.port}/backpressure")
     print(f"  Flows API:    http://{args.host}:{args.port}/flows")
+    print(f"  Value API:    http://{args.host}:{args.port}/value")
     print(f"  WebSocket:    ws://{args.host}:{args.port}/ws")
     print(f"  Press Ctrl-C to stop.\n")
 
@@ -376,6 +410,19 @@ def build_parser() -> argparse.ArgumentParser:
         default=5,
         metavar="N",
         help="Consecutive errors before circuit-breaker trips (default: 5)",
+    )
+    parser.add_argument(
+        "--license-key",
+        dest="license_key",
+        default="",
+        metavar="KEY",
+        help=(
+            "BandwidthOS Pro/Enterprise license key to unlock PVM, SLA, and "
+            "multi-node features.  Omit for community (OSS) mode.  "
+            "Generate a trial key with: "
+            "python -c \"from bandwidth_optimizer.license import LicenseKey; "
+            "print(LicenseKey.generate_trial())\""
+        ),
     )
 
     sub = parser.add_subparsers(dest="command")

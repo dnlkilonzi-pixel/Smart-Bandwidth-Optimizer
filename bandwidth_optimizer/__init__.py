@@ -33,6 +33,13 @@ from .sla import (
 )
 from .stress import StressConfig, StressPattern, StressResult, StressTester
 from .trust import SIGNATURE_HEADER, sign_payload, verify_payload
+from .value import (
+    FlowValuePolicy,
+    ValueLossTracker,
+    ValueScheduler,
+    ValueSLAContract,
+)
+from .license import LicenseError, LicenseKey, parse_license_key
 
 __all__ = [
     # config
@@ -97,4 +104,13 @@ __all__ = [
     "sign_payload",
     "verify_payload",
     "SIGNATURE_HEADER",
+    # PVM – Packet Value Model
+    "FlowValuePolicy",
+    "ValueScheduler",
+    "ValueSLAContract",
+    "ValueLossTracker",
+    # license
+    "LicenseKey",
+    "LicenseError",
+    "parse_license_key",
 ]

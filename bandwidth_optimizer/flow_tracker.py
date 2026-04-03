@@ -125,6 +125,8 @@ class FlowRecord:
     latency_score: float = 0.0
     bandwidth_score: float = 0.0
     burst_score: float = 0.0
+    # Business-value weight assigned by FlowValuePolicy (higher = more valuable)
+    value_coefficient: float = 1.0
 
     def update(self, packet: Packet) -> None:
         """
@@ -215,6 +217,7 @@ class FlowRecord:
             "latency_score": round(self.latency_score, 3),
             "bandwidth_score": round(self.bandwidth_score, 3),
             "burst_score": round(self.burst_score, 3),
+            "value_coefficient": round(self.value_coefficient, 4),
             "age_seconds": round(self.age_seconds, 3),
             "idle_seconds": round(self.idle_seconds, 3),
         }

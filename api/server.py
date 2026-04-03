@@ -45,6 +45,7 @@ from bandwidth_optimizer.coordinator import AgentCoordinator
 from bandwidth_optimizer.safety import HealthStatus, SafetyGuard
 from bandwidth_optimizer.sla import BackpressureMonitor, SLAMonitor
 from bandwidth_optimizer.trust import SIGNATURE_HEADER
+from bandwidth_optimizer.value import ValueSLAContract
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -246,6 +247,44 @@ def create_app(
         state = _bp_monitor.update()
         return state.to_dict()
 
+    @app.get("/value", summary="Packet Value Model (PVM) metrics")
+    async def get_value() -> dict:
+        """
+        Return business-value delivery metrics from the PVM engine.
+
+        Only populated when the optimizer was created with a
+        ``FlowValuePolicy`` (PVM mode).  Returns a summary with
+        ``pvm_enabled: false`` otherwise.
+
+        Key metrics:
+        - ``value_efficiency_pct`` – percentage of potential value delivered
+        - ``value_lost_per_sec``   – value units lost per second (the CFO metric)
+        - ``sla_contracts``        – per-tenant SLA violation status
+        """
+        tracker = _optimizer.value_tracker
+        if tracker is None:
+            return {
+                "pvm_enabled": False,
+                "note": (
+                    "Enable PVM by passing a FlowValuePolicy to BandwidthOptimizer "
+                    "or loading a policy file with value_coefficient rules."
+                ),
+            }
+        result = {"pvm_enabled": True}
+        result.update(tracker.to_dict())
+        # Include per-flow value coefficients
+        flows = _optimizer.flow_tracker.all_flows()
+        result["active_flows"] = len(flows)
+        result["flow_value_summary"] = [
+            {
+                "flow": f"{f['src_ip']}:{f['src_port']}->{f['dst_ip']}:{f['dst_port']}/{f['protocol']}",
+                "value_coefficient": f.get("value_coefficient", 1.0),
+                "packets": f["packet_count"],
+            }
+            for f in flows
+        ]
+        return result
+
     # ── multi-node agent endpoints ────────────────────────────────────────
 
     @app.post(
@@ -332,6 +371,12 @@ def create_app(
                         for p, c in raw["queue"]["enqueue_counts"].items()
                     },
                 }
+                # Include PVM value metrics when available
+                if "value" in raw:
+                    v = raw["value"]
+                    payload["value_efficiency_pct"] = v.get("value_efficiency_pct", 100.0)
+                    payload["value_lost_per_sec"] = v.get("value_lost_per_sec", 0.0)
+                    payload["value_delivered_per_sec"] = v.get("value_delivered_per_sec", 0.0)
                 await ws.send_text(json.dumps(payload))
                 await asyncio.sleep(1.0)
         except WebSocketDisconnect:

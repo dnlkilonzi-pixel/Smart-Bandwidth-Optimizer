@@ -16,13 +16,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Iterator, List, Optional
-
 from .classifier import Packet, TrafficClassifier
 from .compressor import PayloadCompressor
 from .config import DeploymentMode, OptimizerConfig, TrafficPriority
 from .flow_tracker import FlowRecord, FlowTracker
 from .packet_filter import DropDecision, PacketFilter
 from .scheduler import PriorityScheduler
+from .value import FlowValuePolicy, ValueLossTracker, ValueScheduler
 
 
 @dataclass
@@ -62,13 +62,27 @@ class BandwidthOptimizer:
         result = opt.process(Packet(dst_port=443, protocol="tcp", payload=b"..."))
     """
 
-    def __init__(self, config: Optional[OptimizerConfig] = None) -> None:
+    def __init__(
+        self,
+        config: Optional[OptimizerConfig] = None,
+        flow_value_policy: Optional[FlowValuePolicy] = None,
+    ) -> None:
         self._config = config or OptimizerConfig()
         self._classifier = TrafficClassifier()
         self._compressor = PayloadCompressor(config=self._config)
-        self._scheduler = PriorityScheduler(
-            max_queue_size=self._config.max_queue_size
-        )
+        self._flow_value_policy = flow_value_policy
+        # Use ValueScheduler when a FlowValuePolicy is supplied; otherwise
+        # fall back to the standard PriorityScheduler for full compatibility.
+        if flow_value_policy is not None:
+            self._scheduler: PriorityScheduler = ValueScheduler(
+                max_queue_size=self._config.max_queue_size
+            )
+            self._value_tracker: Optional[ValueLossTracker] = ValueLossTracker()
+        else:
+            self._scheduler = PriorityScheduler(
+                max_queue_size=self._config.max_queue_size
+            )
+            self._value_tracker = None
         self._packet_filter = PacketFilter(
             config=self._config,
             current_queue_size_fn=lambda: len(self._scheduler),
@@ -103,10 +117,17 @@ class BandwidthOptimizer:
                 packet.priority, flow_record
             )
 
+        # Stage 1c – assign value coefficient (PVM mode only)
+        if self._flow_value_policy is not None:
+            coeff = self._flow_value_policy.assign(packet)
+            flow_record.value_coefficient = coeff
+
         # Stage 2 – filter / drop
         decision: DropDecision = self._packet_filter.should_drop(packet)
         if decision.drop:
             self._total_dropped += 1
+            if self._value_tracker is not None:
+                self._value_tracker.record_dropped(packet.value_coefficient)
             return ProcessResult(
                 packet=packet,
                 dropped=True,
@@ -124,6 +145,9 @@ class BandwidthOptimizer:
 
         # Stage 4 – enqueue
         self._scheduler.enqueue(packet)
+
+        if self._value_tracker is not None:
+            self._value_tracker.record_delivered(packet.value_coefficient)
 
         return ProcessResult(
             packet=packet,
@@ -168,7 +192,7 @@ class BandwidthOptimizer:
         """
         sched_stats = self._scheduler.stats()
         drop_counts = self._packet_filter.drop_counts()
-        return {
+        base = {
             "mode": self._config.mode.value,
             "total_bandwidth_bps": self._config.total_bandwidth_bps,
             "packets_received": self._total_in,
@@ -187,6 +211,9 @@ class BandwidthOptimizer:
                 "active": self._flow_tracker.flow_count(),
             },
         }
+        if self._value_tracker is not None:
+            base["value"] = self._value_tracker.to_dict()
+        return base
 
     def reset_stats(self) -> None:
         """Reset all running counters."""
@@ -195,6 +222,8 @@ class BandwidthOptimizer:
         self._total_bytes_saved = 0
         self._packet_filter.reset_drop_counts()
         self._scheduler.reset_stats()
+        if self._value_tracker is not None:
+            self._value_tracker.reset()
 
     # ── properties ────────────────────────────────────────────────────────
 
@@ -213,3 +242,13 @@ class BandwidthOptimizer:
     @property
     def flow_tracker(self) -> FlowTracker:
         return self._flow_tracker
+
+    @property
+    def flow_value_policy(self) -> Optional[FlowValuePolicy]:
+        """Return the ``FlowValuePolicy`` if PVM mode is active, else ``None``."""
+        return self._flow_value_policy
+
+    @property
+    def value_tracker(self) -> Optional[ValueLossTracker]:
+        """Return the ``ValueLossTracker`` if PVM mode is active, else ``None``."""
+        return self._value_tracker

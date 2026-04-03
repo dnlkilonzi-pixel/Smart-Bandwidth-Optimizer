@@ -36,6 +36,8 @@ class Packet:
     priority: Optional[TrafficPriority] = None
     # Set by PriorityScheduler at enqueue time – used for sojourn SLA checks
     enqueued_at: Optional[float] = None
+    # Set by FlowValuePolicy – continuous business-value weight (higher = more valuable)
+    value_coefficient: float = 1.0
 
     def __post_init__(self) -> None:
         if self.size_bytes == 0:

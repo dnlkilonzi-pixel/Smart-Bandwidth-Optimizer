@@ -97,6 +97,9 @@ class PolicyRule:
     payload_pattern: Optional[str] = None
     bandwidth_min_pct: float = 0.0
     description: str = ""
+    # Continuous business-value weight for PVM scheduling (higher = more valuable).
+    # Default 1.0 means no value uplift; set to e.g. 50.0 for high-revenue tenants.
+    value_coefficient: float = 1.0
 
     def to_classification_rule(self) -> ClassificationRule:
         """Convert to a ``ClassificationRule`` for use with ``TrafficClassifier``."""
@@ -230,6 +233,14 @@ class PolicyLoader:
         # payload_pattern
         payload_pattern: Optional[str] = match.get("payload_pattern") or None
 
+        # value_coefficient
+        raw_vc = raw.get("value_coefficient", 1.0)
+        value_coefficient = float(raw_vc)
+        if value_coefficient < 0.0:
+            raise PolicyLoadError(
+                f"{ctx} ({name}): value_coefficient must be ≥ 0, got {value_coefficient}"
+            )
+
         return PolicyRule(
             name=str(name),
             priority=priority,
@@ -238,6 +249,7 @@ class PolicyLoader:
             payload_pattern=payload_pattern,
             bandwidth_min_pct=float(raw.get("bandwidth_min_pct", 0.0)),
             description=str(raw.get("description", "")),
+            value_coefficient=value_coefficient,
         )
 
     @staticmethod

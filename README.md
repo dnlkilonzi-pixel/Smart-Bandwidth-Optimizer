@@ -1,6 +1,6 @@
 # Smart-Bandwidth-Optimizer
 
-A production-grade Python system that optimises bandwidth by **prioritising important traffic**, **compressing data**, **dropping unnecessary packets**, **tracking flows**, and exposing **real-time telemetry**.
+A production-grade Python system that optimises bandwidth by **prioritising important traffic**, **compressing data**, **dropping unnecessary packets**, **tracking flows**, and exposing **real-time telemetry** — now with a built-in **Packet Value Model (PVM)** that maximises the *business value* delivered per bit.
 
 Designed to run on a **router**, **local server**, or **ISP edge node**.
 
@@ -14,9 +14,11 @@ Designed to run on a **router**, **local server**, or **ISP edge node**.
 | 📦 Data Compression | zlib/DEFLATE payload compression; skips already-compressed or too-small payloads |
 | 🗑️ Packet Dropping | Per-priority token-bucket rate limiting + RED (Random Early Detection) |
 | 🔀 Flow Intelligence | 5-tuple flow tracking with latency/bandwidth/burst scoring; auto-adjusts priority per flow behaviour |
-| 📋 YAML Policy DSL | Define classification rules in YAML – no Python required; supports ports, protocols, regex payload patterns, bandwidth hints |
+| 📋 YAML Policy DSL | Define classification rules in YAML – no Python required; supports ports, protocols, regex payload patterns, bandwidth hints, and `value_coefficient` |
 | 📡 Real-time Telemetry | FastAPI backend with REST + WebSocket streaming; built-in live dashboard |
 | 🔌 Capture Abstraction | Pluggable backends: `SimulatedCapture`, `NFQueueCapture` (Linux NFQUEUE), `LibpcapCapture` (scapy/libpcap) |
+| 💰 **Packet Value Model** | Value-weighted scheduling via `FlowValuePolicy` + `ValueScheduler`; `ValueLossTracker` reports $/s lost; `ValueSLAContract` guarantees minimum delivered-value-rate per tenant |
+| 🔑 **License / Feature Gating** | HMAC-signed license keys unlock Pro/Enterprise features (PVM, SLA enforcement, multi-node); trial keys generated in one line |
 
 ---
 
@@ -234,19 +236,113 @@ python main.py serve --host 0.0.0.0 --port 8000
 | `/` | GET | Live dashboard (HTML) |
 | `/stats` | GET | JSON statistics snapshot |
 | `/flows` | GET | All active flows with scoring |
+| `/value` | GET | **PVM metrics** – value delivered/lost per second, per-flow coefficients, SLA contract status |
+| `/sla` | GET | SLA violation counts (requires `SLAMonitor`) |
+| `/backpressure` | GET | Backpressure signal (none / soft / hard) with `recommended_throttle_pct` |
 | `/health` | GET | Health check |
-| `/ws` | WebSocket | Push stats every second |
+| `/ws` | WebSocket | Push stats every second (includes `value_efficiency_pct` when PVM is active) |
 
 ---
 
-## Running Tests
+## Packet Value Model (PVM)
+
+The PVM reframes network scheduling from *"which priority tier is this?"* to *"how much business value does this flow deliver per bit?"*.
+
+A BACKGROUND BitTorrent flow from a paying enterprise customer with `value_coefficient: 200` will be scheduled **ahead** of a default CRITICAL flow — because it is worth more to the business.
+
+### Enable PVM in 3 lines
+
+```python
+from bandwidth_optimizer.policy import PolicyLoader
+from bandwidth_optimizer.value import FlowValuePolicy
+from bandwidth_optimizer import BandwidthOptimizer
+
+policy = PolicyLoader.load_file("my_policy.yaml")
+optimizer = BandwidthOptimizer(flow_value_policy=FlowValuePolicy.from_policy(policy))
+```
+
+### YAML policy with value coefficients
+
+```yaml
+version: "1"
+defaults:
+  priority: MEDIUM
+rules:
+  - name: enterprise_voip
+    description: "Enterprise VoIP (worth 100× default)"
+    match:
+      ports: [5060, 5061]
+      protocols: [udp]
+    priority: CRITICAL
+    value_coefficient: 100.0     # ← PVM key; higher = more scheduling weight
+
+  - name: paid_streaming
+    match:
+      ports: [443]
+      protocols: [tcp]
+    priority: HIGH
+    value_coefficient: 50.0
+
+  - name: bulk_backup
+    match:
+      ports: [6881]
+      protocols: [tcp, udp]
+    priority: BACKGROUND
+    value_coefficient: 0.5       # low value → yields to everything else
+```
+
+### Value metrics in stats
+
+```python
+stats = optimizer.stats()
+# stats["value"]["value_efficiency_pct"]  → 97.3
+# stats["value"]["value_lost_per_sec"]    → 4.2
+# stats["value"]["value_delivered_total"] → 12345.6
+```
+
+### ValueSLAContract – per-tenant guarantees
+
+```python
+from bandwidth_optimizer.value import ValueSLAContract, ValueLossTracker
+
+contract = ValueSLAContract("voip_tenant", min_value_rate_per_sec=100.0)
+if contract.is_violated(optimizer.value_tracker.value_delivered_per_sec):
+    alert("SLA breach: VoIP tenant below guaranteed value rate")
+```
+
+---
+
+## License Keys
+
+Three product tiers unlocked via HMAC-signed license keys:
+
+| Tier | Features | Price |
+|---|---|---|
+| Community (OSS) | All base features | Free |
+| Pro | + PVM, SLA enforcement, multi-node | $2k–$15k/site/yr |
+| Enterprise / ISP | + value federation, BGP hooks | $50k–$500k/cluster/yr |
+
+```bash
+# Generate a trial key (all Pro features, no expiry)
+python -c "from bandwidth_optimizer.license import LicenseKey; print(LicenseKey.generate_trial())"
+
+# Use the key
+python main.py --license-key <KEY> --policy my_policy.yaml serve
+```
+
+The license key format is `<base64url_payload>.<HMAC-SHA256>`.  The development
+key (`bandwidthos-dev-key`) is built in and enables evaluation without a
+licensing server.  Production keys are signed with a private secret set via
+`BANDWIDTHOS_LICENSE_SECRET`.
+
+
 
 ```bash
 pip install pytest httpx
 pytest tests/ -v
 ```
 
-152 tests covering all modules end-to-end.
+394 tests covering all modules end-to-end.
 
 ---
 
