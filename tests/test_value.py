@@ -562,10 +562,12 @@ class TestPolicyValueCoefficient:
         assert d["value_coefficient"] == pytest.approx(42.5)
 
     def test_packet_default_value_coefficient(self):
-        pkt = Packet(dst_port=80, protocol="tcp")
+        pkt = Packet(src_ip="1.2.3.4", dst_ip="5.6.7.8",
+                     src_port=1234, dst_port=80, protocol="tcp")
         assert pkt.value_coefficient == pytest.approx(1.0)
 
     def test_packet_value_coefficient_assignable(self):
-        pkt = Packet(dst_port=80, protocol="tcp")
+        pkt = Packet(src_ip="1.2.3.4", dst_ip="5.6.7.8",
+                     src_port=1234, dst_port=80, protocol="tcp")
         pkt.value_coefficient = 25.0
         assert pkt.value_coefficient == pytest.approx(25.0)
